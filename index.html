@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Symulator</title>
+    <link rel="stylesheet" href="sass/main.css" />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+
+  <body>
+    <header class="header">
+      <h1 class="header__header">Symulator</h1>
+    </header>
+    <main class="main">
+      <section class="main__currentGameContainer main__section">
+        <div
+          class="main__currentGameContainer__club main__currentGameContainer__club--left"
+        >
+          <div
+            class="main__currentGameContainer__club__container main__currentGameContainer__club__container--home"
+          >
+            <div
+              class="main__currentGameContainer__club__container__textBox main__currentGameContainer__club__container__textBox--home"
+            >
+              <h2
+                class="main__currentGameContainer__club__container__textBox__stake main__currentGameContainer__club__container__textBox__stake"
+                id="hostsStartStake"
+              >
+                1,82
+              </h2>
+              <p
+                class="main__currentGameContainer__club__container__textBox__text"
+              >
+                KURS WSTĘPNY
+              </p>
+            </div>
+            <div class="main__currentGameContainer__club__containerSecond">
+              <svg
+                class="main__currentGameContainer__club__icon"
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16 8C16 10.3005 15.029 12.3742 13.4744 13.8336L12.0147 11.8244L13.4959 7.26574L15.8592 6.49785C15.9516 6.98439 16 7.48655 16 8Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M10.3966 13L11.8573 15.0104C10.7134 15.6411 9.39861 16 8 16C6.60139 16 5.28661 15.6411 4.14273 15.0104L5.60335 13H10.3966Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M0 8C0 10.3005 0.971022 12.3742 2.52556 13.8336L3.98532 11.8244L2.50412 7.26575L0.140801 6.49786C0.0483698 6.9844 0 7.48655 0 8Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M3.12212 5.36363L0.758423 4.59561C1.90208 2.16713 4.23136 0.40714 6.99999 0.0618925V2.54619L3.12212 5.36363Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M8.99999 2.54619V0.0618896C11.7686 0.40713 14.0979 2.16712 15.2416 4.5956L12.8779 5.36362L8.99999 2.54619Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M4.47328 6.85409L7.99999 4.29179L11.5267 6.85409L10.1796 11H5.82037L4.47328 6.85409Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <p
+                class="main__currentGameContainer__club__containerSecond__subHeader main__currentGameContainer__club__containerSecond__subHeader"
+              >
+                GOSPODARZE
+              </p>
+            </div>
+          </div>
+        </div>
+        <h2 class="main__currentGameContainer__text">VS</h2>
+        <div
+          class="main__currentGameContainer__club main__currentGameContainer__club--right"
+        >
+          <div class="main__currentGameContainer__club__container">
+            <div class="main__currentGameContainer__club__container__textBox">
+              <h2
+                class="main__currentGameContainer__club__container__textBox__stake main__currentGameContainer__club__container__textBox__stake--enemy"
+                id="visitorsStartStake"
+              >
+                3,20
+              </h2>
+              <p
+                class="main__currentGameContainer__club__container__textBox__text"
+              >
+                KURS WSTĘPNY
+              </p>
+            </div>
+            <div class="main__currentGameContainer__club__containerSecond">
+              <svg
+                class="main__currentGameContainer__club__icon"
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M16 8C16 10.3005 15.029 12.3742 13.4744 13.8336L12.0147 11.8244L13.4959 7.26574L15.8592 6.49785C15.9516 6.98439 16 7.48655 16 8Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M10.3966 13L11.8573 15.0104C10.7134 15.6411 9.39861 16 8 16C6.60139 16 5.28661 15.6411 4.14273 15.0104L5.60335 13H10.3966Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M0 8C0 10.3005 0.971022 12.3742 2.52556 13.8336L3.98532 11.8244L2.50412 7.26575L0.140801 6.49786C0.0483698 6.9844 0 7.48655 0 8Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M3.12212 5.36363L0.758423 4.59561C1.90208 2.16713 4.23136 0.40714 6.99999 0.0618925V2.54619L3.12212 5.36363Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M8.99999 2.54619V0.0618896C11.7686 0.40713 14.0979 2.16712 15.2416 4.5956L12.8779 5.36362L8.99999 2.54619Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M4.47328 6.85409L7.99999 4.29179L11.5267 6.85409L10.1796 11H5.82037L4.47328 6.85409Z"
+                  fill="currentColor"
+                />
+              </svg>
+              <p
+                class="main__currentGameContainer__club__containerSecond__subHeader main__currentGameContainer__club__containerSecond__subHeader--enemy"
+              >
+                PRZYJEZDNI
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="main__configurationContainer main__section">
+        <div class="main__configurationContainer__upper">
+          <div class="main__configurationContainer__upper__header">
+            <svg
+              class="main__configurationContainer__upper__header__icon"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="{1.5}"
+              stroke="currentColor"
+              className="size-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
+              />
+            </svg>
+            <h2 class="secondHeader">Konfiguracja</h2>
+          </div>
+
+          <div class="main__configurationContainer__upper__buttonsContainer">
+            <button
+              id="simulationBtn"
+              class="main__configurationContainer__upper__buttonsContainer__button"
+            >
+              <svg
+                class="main__configurationContainer__upper__buttonsContainer__button__icon main__configurationContainer__upper__buttonsContainer__button__icon--start"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+
+              <svg
+                class="main__configurationContainer__upper__buttonsContainer__button__icon main__configurationContainer__upper__buttonsContainer__button__icon--stop"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0A.75.75 0 0 1 15 4.5h1.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H15a.75.75 0 0 1-.75-.75V5.25Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+
+              <span id="simulationBtnText">START</span>
+            </button>
+            <button
+              id="resetBtn"
+              class="main__configurationContainer__upper__buttonsContainer__button"
+            >
+              <svg
+                class="main__configurationContainer__upper__buttonsContainer__button__icon"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="{1.5}"
+                stroke="currentColor"
+                className="size-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+                />
+              </svg>
+
+              RESET
+            </button>
+          </div>
+        </div>
+
+        <div class="main__configurationContainer__bottom">
+          <div class="main__configurationContainer__bottom__team">
+            <div class="main__configurationContainer__bottom__team__container">
+              <svg
+                class="main__configurationContainer__bottom__team__container__icon"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="{1.5}"
+                stroke="currentColor"
+                className="size-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                />
+              </svg>
+
+              <h2
+                class="main__configurationContainer__bottom__team__container__header"
+              >
+                gospodarze
+              </h2>
+            </div>
+
+            <div
+              class="main__configurationContainer__bottom__team__container__list"
+            >
+              <button
+                id="hostsPrevBtn"
+                class="main__configurationContainer__bottom__team__container__list__btn"
+              >
+                <svg
+                  class="main__configurationContainer__bottom__team__container__list__btn__icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="{1.5}"
+                  stroke="currentColor"
+                  className="size-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+                  />
+                </svg>
+              </button>
+
+              <p
+                class="main__configurationContainer__bottom__team__container__list__currentClub"
+                id="hostsTeam"
+              >
+                Arsenal
+              </p>
+
+              <button
+                id="hostsNextBtn"
+                class="main__configurationContainer__bottom__team__container__list__btn"
+              >
+                <svg
+                  class="main__configurationContainer__bottom__team__container__list__btn__icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="{1.5}"
+                  stroke="currentColor"
+                  className="size-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="main__configurationContainer__bottom__team">
+            <div class="main__configurationContainer__bottom__team__container">
+              <svg
+                class="main__configurationContainer__bottom__team__container__icon"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="{1.5}"
+                stroke="currentColor"
+                className="size-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5"
+                />
+              </svg>
+
+              <h2
+                class="main__configurationContainer__bottom__team__container__header"
+              >
+                goście
+              </h2>
+            </div>
+
+            <div
+              class="main__configurationContainer__bottom__team__container__list"
+            >
+              <button
+                id="visitorsPrevBtn"
+                class="main__configurationContainer__bottom__team__container__list__btn"
+              >
+                <svg
+                  class="main__configurationContainer__bottom__team__container__list__btn__icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="{1.5}"
+                  stroke="currentColor"
+                  className="size-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+                  />
+                </svg>
+              </button>
+
+              <p
+                class="main__configurationContainer__bottom__team__container__list__currentClub"
+                id="visitorsTeam"
+              >
+                Chelsea
+              </p>
+
+              <button
+                id="visitorsNextBtn"
+                class="main__configurationContainer__bottom__team__container__list__btn"
+              >
+                <svg
+                  class="main__configurationContainer__bottom__team__container__list__btn__icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="{1.5}"
+                  stroke="currentColor"
+                  className="size-6"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="main__configurationContainer__bottom__team">
+            <div class="main__configurationContainer__bottom__team__container">
+              <svg
+                class="main__configurationContainer__bottom__team__container__icon"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="{1.5}"
+                stroke="currentColor"
+                className="size-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                />
+              </svg>
+
+              <h2
+                class="main__configurationContainer__bottom__team__container__header"
+              >
+                Czas trwania
+              </h2>
+            </div>
+
+            <input
+              type="number"
+              class="main__configurationContainer__bottom__team__container__input"
+              placeholder="Podaj czas w sekundach"
+            />
+          </div>
+
+          <div class="main__configurationContainer__bottom__team">
+            <div class="main__configurationContainer__bottom__team__container">
+              <svg
+                class="main__configurationContainer__bottom__team__container__icon"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="{1.5}"
+                stroke="currentColor"
+                className="size-6"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                />
+              </svg>
+
+              <h2
+                class="main__configurationContainer__bottom__team__container__header"
+              >
+                Ilość graczy
+              </h2>
+            </div>
+
+            <input
+              type="number"
+              class="main__configurationContainer__bottom__team__container__input"
+              placeholder="Podaj ilość graczy "
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="main__section main__liveStatsContainer">
+        <div class="main__liveStatsContainer__tittle">
+          <svg
+            class="main__liveStatsContainer__tittle__icon"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
+            />
+          </svg>
+
+          <h2 class="secondHeader">Wyniki w czasie rzeczywistym</h2>
+        </div>
+
+        <div class="main__liveStatsContainer__upperContainer">
+          <div
+            class="main__liveStatsContainer__upperContainer__currentStakeContainer"
+          >
+            <p
+              class="main__liveStatsContainer__upperContainer__currentStakeContainer__tittle"
+            >
+              Live: gospodarze (H)
+            </p>
+
+            <div
+              class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle"
+            >
+              <p
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle__stake"
+              >
+                1.88
+              </p>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle__change"
+              >
+                <p
+                  class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle__change__icon"
+                >
+                  ↗
+                </p>
+
+                <p
+                  class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle__change__text"
+                >
+                  Wzrost
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart"
+            >
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 45; --opacity: 0.35; --barColor: #4edea3"
+              ></div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 60; --opacity: 0.45; --barColor: #4edea3"
+              ></div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 52; --opacity: 0.4; --barColor: #4edea3"
+              ></div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 74; --opacity: 0.6; --barColor: #4edea3"
+              ></div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 96; --opacity: 0.9; --barColor: #4edea3"
+              ></div>
+            </div>
+          </div>
+
+          <div
+            class="main__liveStatsContainer__upperContainer__currentStakeContainer main__liveStatsContainer__upperContainer__currentStakeContainer--enemy"
+          >
+            <p
+              class="main__liveStatsContainer__upperContainer__currentStakeContainer__tittle"
+            >
+              Live: goście (A)
+            </p>
+
+            <div
+              class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle"
+            >
+              <p
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle__stake main__liveStatsContainer__upperContainer__currentStakeContainer__middle__stake--enemy"
+              >
+                3.45
+              </p>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle__change main__liveStatsContainer__upperContainer__currentStakeContainer__middle__change--enemy"
+              >
+                <p
+                  class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle__change__icon"
+                >
+                  ↘
+                </p>
+
+                <p
+                  class="main__liveStatsContainer__upperContainer__currentStakeContainer__middle__change__text"
+                >
+                  Spadek
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart"
+            >
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 50; --opacity: 0.8; --barColor: #00aeff"
+              ></div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 42; --opacity: 0.55; --barColor: #00aeff"
+              ></div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 45; --opacity: 0.5; --barColor: #00aeff"
+              ></div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 32; --opacity: 0.35; --barColor: #00aeff"
+              ></div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+                style="--height: 22; --opacity: 0.25; --barColor: #00aeff"
+              ></div>
+            </div>
+          </div>
+
+          <div class="main__liveStatsContainer__upperContainer__betsContainer">
+            <p
+              class="main__liveStatsContainer__upperContainer__betsContainer__tittle"
+            >
+              Rozkład zakładów
+            </p>
+
+            <div
+              class="main__liveStatsContainer__upperContainer__betsContainer__box"
+            >
+              <div
+                class="main__liveStatsContainer__upperContainer__betsContainer__box__row"
+              >
+                <p
+                  class="main__liveStatsContainer__upperContainer__betsContainer__box__row__text"
+                >
+                  Gospodarze
+                </p>
+
+                <p
+                  class="main__liveStatsContainer__upperContainer__betsContainer__box__row__percent"
+                >
+                  65%
+                </p>
+              </div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__betsContainer__box__line"
+              >
+                <div
+                  class="main__liveStatsContainer__upperContainer__betsContainer__box__line__progress"
+                  style="--width: 65; --progressColor: #4edea3"
+                ></div>
+              </div>
+            </div>
+
+            <div
+              class="main__liveStatsContainer__upperContainer__betsContainer__box"
+            >
+              <div
+                class="main__liveStatsContainer__upperContainer__betsContainer__box__row"
+              >
+                <p
+                  class="main__liveStatsContainer__upperContainer__betsContainer__box__row__text"
+                >
+                  Goście
+                </p>
+
+                <p
+                  class="main__liveStatsContainer__upperContainer__betsContainer__box__row__percent"
+                >
+                  35%
+                </p>
+              </div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__betsContainer__box__line"
+              >
+                <div
+                  class="main__liveStatsContainer__upperContainer__betsContainer__box__line__progress"
+                  style="--width: 35; --progressColor: #00aeff"
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="main__liveStatsContainer__upperContainer__aiContainer">
+            <p
+              class="main__liveStatsContainer__upperContainer__aiContainer__tittle"
+            >
+              Pewność modelu AI
+            </p>
+
+            <div
+              class="main__liveStatsContainer__upperContainer__aiContainer__bottom"
+            >
+              <div
+                class="main__liveStatsContainer__upperContainer__aiContainer__bottom__circle"
+                style="--percent: 82; --circleColor: #4edea3"
+              >
+                <div
+                  class="main__liveStatsContainer__upperContainer__aiContainer__bottom__circle__inside"
+                >
+                  <p
+                    class="main__liveStatsContainer__upperContainer__aiContainer__bottom__circle__inside__percent"
+                  >
+                    82%
+                  </p>
+                </div>
+              </div>
+
+              <div
+                class="main__liveStatsContainer__upperContainer__aiContainer__bottom__textBox"
+              >
+                <svg
+                  class="main__liveStatsContainer__upperContainer__aiContainer__bottom__textBox__icon"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 12.75 11.25 15 15 9.75M12 3.75 3.75 7.5v5.25c0 5.385 3.84 10.31 8.25 11.25 4.41-.94 8.25-5.865 8.25-11.25V7.5L12 3.75Z"
+                  />
+                </svg>
+
+                <p
+                  class="main__liveStatsContainer__upperContainer__aiContainer__bottom__textBox__text"
+                >
+                  Wysoka stabilność
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="main__liveStatsContainer__historyContainer">
+          <p class="main__liveStatsContainer__historyContainer__tittle">
+            Szczegółowa aktywność symulacji
+          </p>
+
+          <div class="main__liveStatsContainer__historyContainer__table">
+            <div
+              class="main__liveStatsContainer__historyContainer__table__header"
+            >
+              <p
+                class="main__liveStatsContainer__historyContainer__table__header__text"
+              >
+                Gracz
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__header__text"
+              >
+                ID transakcji
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__header__text"
+              >
+                Pozycja
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__header__text"
+              >
+                Stawka
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__header__text"
+              >
+                Możliwy zwrot
+              </p>
+            </div>
+
+            <div class="main__liveStatsContainer__historyContainer__table__row">
+              <div
+                class="main__liveStatsContainer__historyContainer__table__row__player"
+              >
+                <div
+                  class="main__liveStatsContainer__historyContainer__table__row__player__iconBox"
+                >
+                  <svg
+                    class="main__liveStatsContainer__historyContainer__table__row__player__iconBox__icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"
+                    />
+                  </svg>
+                </div>
+
+                <p
+                  class="main__liveStatsContainer__historyContainer__table__row__player__name"
+                >
+                  Player_#8492
+                </p>
+              </div>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__id"
+              >
+                TX-0092-FF-18
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__position"
+              >
+                Wygrana gospodarzy
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__stake"
+              >
+                1,200.00 zł
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__return"
+              >
+                2,220.00 zł
+              </p>
+            </div>
+
+            <div class="main__liveStatsContainer__historyContainer__table__row">
+              <div
+                class="main__liveStatsContainer__historyContainer__table__row__player"
+              >
+                <div
+                  class="main__liveStatsContainer__historyContainer__table__row__player__iconBox"
+                >
+                  <svg
+                    class="main__liveStatsContainer__historyContainer__table__row__player__iconBox__icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"
+                    />
+                  </svg>
+                </div>
+
+                <p
+                  class="main__liveStatsContainer__historyContainer__table__row__player__name"
+                >
+                  Player_#3122
+                </p>
+              </div>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__id"
+              >
+                TX-8102-AP-99
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__position"
+              >
+                Wygrana gospodarzy
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__stake"
+              >
+                850.00 zł
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__return"
+              >
+                1,572.50 zł
+              </p>
+            </div>
+
+            <div class="main__liveStatsContainer__historyContainer__table__row">
+              <div
+                class="main__liveStatsContainer__historyContainer__table__row__player"
+              >
+                <div
+                  class="main__liveStatsContainer__historyContainer__table__row__player__iconBox"
+                >
+                  <svg
+                    class="main__liveStatsContainer__historyContainer__table__row__player__iconBox__icon"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"
+                    />
+                  </svg>
+                </div>
+
+                <p
+                  class="main__liveStatsContainer__historyContainer__table__row__player__name"
+                >
+                  Player_#1044
+                </p>
+              </div>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__id"
+              >
+                TX-5512-KL-32
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__position main__liveStatsContainer__historyContainer__table__row__position--enemy"
+              >
+                Wygrana gości
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__stake"
+              >
+                2,000.00 zł
+              </p>
+
+              <p
+                class="main__liveStatsContainer__historyContainer__table__row__return"
+              >
+                4,800.00 zł
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="js/main.js"></script>
+  </body>
+</html>
