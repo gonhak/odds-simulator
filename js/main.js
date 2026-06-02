@@ -55,16 +55,61 @@ const renderSimulationButton = () => {
   }
 };
 
-const startSimulation = () => {
-  isSimulationRunning = true;
+// stoper do odswiezania
+let interval;
 
-  renderSimulationButton();
+const startSimulation = () => {
+  // 1. Zbieramy dane do wysłania
+  const config = {
+      gospodarze: premierLeagueClubs[hostsIndex],
+      goscie: premierLeagueClubs[visitorsIndex],
+      czas_trwania: 60, // narazie const
+      ilosc_graczy: 100
+  };
+
+  // 2. polaczenie z backendem
+  fetch('http://127.0.0.1:8000/api/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+  })
+  .then(response => response.json())
+  .then(data => {
+      console.log("Serwer backend:", data.message);
+
+      isSimulationRunning = true;
+      renderSimulationButton();
+
+      // Odpalamy stoper sekunde
+      interval = setInterval(getStatus, 1000);
+  })
+  .catch(error => console.error("Błąd połączenia (START):", error));
 };
 
 const stopSimulation = () => {
-  isSimulationRunning = false;
+  // stop do backendu
+  fetch('http://127.0.0.1:8000/api/stop', { method: 'POST' })
+  .then(response => response.json())
+  .then(data => {
+      console.log("Serwer backend:", data.message);
 
-  renderSimulationButton();
+      isSimulationRunning = false;
+      renderSimulationButton();
+
+      // koniec stoper
+      clearInterval(interval);
+  })
+  .catch(error => console.error("Błąd połączenia (STOP):", error));
+};
+
+// funckja pobierajaca dane co sekunde
+const getStatus = () => {
+    fetch('http://127.0.0.1:8000/api/status')
+    .then(response => response.json())
+    .then(dane => {
+        console.log("LIVE STATUS:", dane);
+    })
+    .catch(error => console.error("Błąd pobierania statusu:", error));
 };
 
 const toggleSimulation = () => {
