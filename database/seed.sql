@@ -53,3 +53,28 @@ INSERT INTO grading_results
 (simulation_id, tick_number, confidence_percent, grade, risk_level, stability_label, model_note)
 VALUES
 (1, 1, 82.00, 'A', 'LOW', 'WYSOKA STABILNOŚĆ', 'Model wykazuje stabilny trend kursów.');
+
+SELECT COUNT(*) FROM teams;
+
+SELECT COUNT(*) FROM historical_matches;
+
+SELECT 
+    hm.id,
+    hm.match_date,
+    ht.name AS home_team,
+    at.name AS away_team,
+    hm.home_goals,
+    hm.away_goals,
+    hm.result,
+    hm.b365_home_odd,
+    hm.b365_draw_odd,
+    hm.b365_away_odd
+FROM historical_matches hm
+JOIN teams ht ON hm.home_team_id = ht.id
+JOIN teams at ON hm.away_team_id = at.id
+LIMIT 20;
+
+SELECT * FROM simulations ORDER BY id DESC;
+SELECT * FROM odds ORDER BY id DESC;
+SELECT * FROM odds_history ORDER BY id DESC;
+SELECT * FROM grading_results ORDER BY id DESC;

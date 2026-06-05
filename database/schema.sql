@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS teams;
 
 CREATE TABLE teams (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
     short_name VARCHAR(20),
     logo_url VARCHAR(255),
     primary_color VARCHAR(20),
@@ -196,4 +196,36 @@ CREATE TABLE grading_results (
     CONSTRAINT fk_grading_simulation
         FOREIGN KEY (simulation_id) REFERENCES simulations(id)
         ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS historical_matches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    match_date DATE,
+    home_team_id INT NOT NULL,
+    away_team_id INT NOT NULL,
+
+    home_goals INT,
+    away_goals INT,
+    result ENUM('H', 'D', 'A'),
+
+    home_shots INT,
+    away_shots INT,
+    home_shots_target INT,
+    away_shots_target INT,
+
+    b365_home_odd DECIMAL(6,2),
+    b365_draw_odd DECIMAL(6,2),
+    b365_away_odd DECIMAL(6,2),
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_hist_home_team
+        FOREIGN KEY (home_team_id) REFERENCES teams(id),
+
+    CONSTRAINT fk_hist_away_team
+        FOREIGN KEY (away_team_id) REFERENCES teams(id),
+
+    CONSTRAINT uq_historical_match
+        UNIQUE (match_date, home_team_id, away_team_id)
 );
