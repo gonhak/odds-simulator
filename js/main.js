@@ -11,6 +11,9 @@ const hostsNextBtn = document.querySelector("#hostsNextBtn");
 const visitorsPrevBtn = document.querySelector("#visitorsPrevBtn");
 const visitorsNextBtn = document.querySelector("#visitorsNextBtn");
 
+const hostsStartStake = document.querySelector("#hostsStartStake");
+const visitorsStartStake = document.querySelector("#visitorsStartStake");
+
 const premierLeagueClubs = [
   "Arsenal",
   "Aston Villa",
@@ -76,6 +79,12 @@ const startSimulation = () => {
   .then(response => response.json())
   .then(data => {
       console.log("Serwer backend:", data.message);
+
+      if (data.initial_odds) {
+        console.log("kursy AI:", data.initial_odds);
+        hostsStartStake.textContent = data.initial_odds.home.toFixed(2);
+        visitorsStartStake.textContent = data.initial_odds.away.toFixed(2);
+      }
 
       isSimulationRunning = true;
       renderSimulationButton();

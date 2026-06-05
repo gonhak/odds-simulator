@@ -2,7 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from ai_model import train_ai_model
+
 app = FastAPI()
+
+
+# uczymy ai zaraz po wlaczeniu serwera
+ai_brain = train_ai_model()
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,10 +31,21 @@ def start_simulation(config: SimulationConfig):
     global isSimulationRunning
     isSimulationRunning = True
     print("simulation start...")
-    print(f"Mecz: {config.gospodarze} vs {config.goscie}")
-    print(f"Czas: {config.czas_trwania}s | Graczy: {config.ilosc_graczy}")
 
-    return {"status": "ok","message": "simulation started"}
+    # wynik AI
+    chances = ai_brain.get_match_probabilities(config.gospodarze, config.goscie)
+    chances_home = chances.get('H', 0.33)
+    chances_away = chances.get('A', 0.33)
+
+    # zamiana na kursy
+    odds_home = round(1 / chances_home, 2)
+    odds_away = round(1 / chances_away, 2)
+
+    print(f"Mecz: {config.gospodarze} vs {config.goscie}")
+    print(f"Czas: {config.czas_trwania} vs {config.ilosc_graczy}")
+    print(f"AI gospodarze: {odds_home} goscie: {odds_away}")
+
+    return {"status": "ok","message": "simulation started", "initial_odds" : {"home" : odds_home , "away" : odds_away}}
 
 @app.post("/api/stop")
 def stop_simulation():
