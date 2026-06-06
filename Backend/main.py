@@ -285,11 +285,54 @@ def start_simulation(config: SimulationConfig):
 @app.post("/api/stop")
 def stop_simulation():
     global isSimulationRunning
+    global current_simulation_id
+
     isSimulationRunning = False
     print("simulation stop...")
 
-    return {"status": "ok", "message": "simulation stopped"}
+    if current_simulation_id is None:
+        return {
+            "status": "ok",
+            "message": "simulation stopped, but no active simulation was found in database"
+        }
 
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        # aktualizujemy status symulacji w bazie danych
+        cursor.execute("""
+            UPDATE simulations
+            SET status = 'FINISHED',
+                finished_at = NOW()
+            WHERE id = %s
+        """, (
+            current_simulation_id,
+        ))
+
+        conn.commit()
+
+        stopped_simulation_id = current_simulation_id
+        current_simulation_id = None
+
+        return {
+            "status": "ok",
+            "message": "simulation stopped",
+            "simulation_id": stopped_simulation_id
+        }
+
+    except Exception as e:
+        conn.rollback()
+        print("Błąd podczas zatrzymywania symulacji:", e)
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.get("/api/status")
 def get_status():
