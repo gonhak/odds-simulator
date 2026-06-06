@@ -42,6 +42,59 @@ let isSimulationRunning = false;
 let hostsIndex = 0;
 let visitorsIndex = 6;
 
+let homeOddsHistory = [];
+let awayOddsHistory = [];
+
+const homeChartBars = document.querySelectorAll(
+  ".main__liveStatsContainer__upperContainer__currentStakeContainer:not(.main__liveStatsContainer__upperContainer__currentStakeContainer--enemy) .main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+);
+
+const awayChartBars = document.querySelectorAll(
+  ".main__liveStatsContainer__upperContainer__currentStakeContainer--enemy .main__liveStatsContainer__upperContainer__currentStakeContainer__chart__bar"
+);
+
+const updateOddsChart = (bars, history) => {
+  if (!bars.length || !history.length) return;
+
+  const minOdd = Math.min(...history);
+  const maxOdd = Math.max(...history);
+
+  bars.forEach((bar, index) => {
+    const odd = history[index];
+
+    if (odd === undefined) {
+      bar.style.setProperty("--height", 10);
+      bar.style.setProperty("--opacity", 0.25);
+      bar.dataset.odd = "";
+      return;
+    }
+
+    let height;
+
+    if (maxOdd === minOdd) {
+      height = 50;
+    } else {
+      height = 20 + ((odd - minOdd) / (maxOdd - minOdd)) * 80;
+    }
+
+    const opacity = 0.35 + (height / 100) * 0.65;
+
+    bar.style.setProperty("--height", Math.round(height));
+    bar.style.setProperty("--opacity", opacity.toFixed(2));
+  });
+};
+
+const addOddsToHistory = (homeOdd, awayOdd) => {
+  homeOddsHistory.push(Number(homeOdd));
+  awayOddsHistory.push(Number(awayOdd));
+
+  if (homeOddsHistory.length > 5) homeOddsHistory.shift();
+  if (awayOddsHistory.length > 5) awayOddsHistory.shift();
+
+  updateOddsChart(homeChartBars, homeOddsHistory);
+  updateOddsChart(awayChartBars, awayOddsHistory);
+};
+
 const renderSimulationButton = () => {
   if (isSimulationRunning) {
     simulationBtn.classList.add(
@@ -84,6 +137,11 @@ const startSimulation = () => {
         console.log("kursy AI:", data.initial_odds);
         hostsStartStake.textContent = data.initial_odds.home.toFixed(2);
         visitorsStartStake.textContent = data.initial_odds.away.toFixed(2);
+        
+        homeOddsHistory = [];
+        awayOddsHistory = [];
+
+        addOddsToHistory(data.initial_odds.home, data.initial_odds.away);
       }
 
       isSimulationRunning = true;
@@ -140,6 +198,7 @@ const getStatus = () => {
             if(liveHome) liveHome.textContent = data.kursy.gospodarze.toFixed(2);
             if(liveAway) liveAway.textContent = data.kursy.goscie.toFixed(2);
 
+            addOddsToHistory(data.kursy.gospodarze, data.kursy.goscie);
             const homeTrendBox = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer:nth-child(1) .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__trendBox");
             const awayTrendBox = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer--enemy .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__trendBox");
 
