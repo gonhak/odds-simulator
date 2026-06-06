@@ -89,7 +89,9 @@ def start_simulation(config: SimulationConfig):
     current_sim_state["away_odd"] = odds_away
     current_sim_state["pool_home"] = 0.0
     current_sim_state["pool_away"] = 0.0
-
+    current_sim_state["home_bets_count"] = 0
+    current_sim_state["away_bets_count"] = 0
+    current_sim_state["tick"] = 0
     current_sim_state["base_prob_home"] = chances_home
     current_sim_state["base_prob_away"] = chances_away
 
@@ -343,8 +345,10 @@ def get_status():
 
             if bet_on_home:
                 current_sim_state["pool_home"] += stawka
+                current_sim_state["home_bets_count"] += 1
             else:
                 current_sim_state["pool_away"] += stawka
+                current_sim_state["away_bets_count"] += 1
 
             # Zapisujemy zakład do bazy danych
             cursor.execute("""
@@ -503,8 +507,8 @@ def get_status():
             current_sim_state["pool_home"],
             current_sim_state["pool_away"],
             0.00,
-            0,
-            0,
+            current_sim_state["home_bets_count"],
+            current_sim_state["away_bets_count"],
             0,
             home_percent,
             away_percent,
