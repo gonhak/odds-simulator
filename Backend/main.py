@@ -29,6 +29,7 @@ class SimulationConfig(BaseModel):
     ilosc_graczy: int
 
 isSimulationRunning = False
+current_simulation_id = None
 
 current_sim_state = {
     "home_team": "",
@@ -143,6 +144,9 @@ def start_simulation(config: SimulationConfig):
         ))
 
         simulation_id = cursor.lastrowid
+
+        global current_simulation_id
+        current_simulation_id = simulation_id
 
         # Zapisujemy ustawienia symulacji
         cursor.execute("""
@@ -287,88 +291,304 @@ def stop_simulation():
 
 @app.get("/api/status")
 def get_status():
+    global current_simulation_id
+    global isSimulationRunning
     if not isSimulationRunning:
         return {"status": "waiting"}
+    
+    if current_simulation_id is None:
+        return {
+            "status": "error",
+            "message": "Brak aktywnej symulacji w bazie danych"
+        }
+    
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
 
-    # losowo 1 do 3 zakladow na sekunde
-    new_bets = []
-    for _ in range(random.randint(1, 3)):
+    try:
+        # Zwiększamy numer ticka symulacji
+        current_sim_state["tick"] = current_sim_state.get("tick", 0) + 1
+        tick_number = current_sim_state["tick"]
 
-        # losowanie zakladow graczy
-        bet_on_home = random.choices(
-            [True, False],
-            weights=[current_sim_state["base_prob_home"], current_sim_state["base_prob_away"]],
-            k=1
-        )[0]
+        # losowo 1 do 3 zakladow na sekunde
+        new_bets = []
 
-        pozycja = f"Wygrana: {current_sim_state['home_team']}" if bet_on_home else f"Wygrana: {current_sim_state['away_team']}"
-        aktualny_kurs = current_sim_state["home_odd"] if bet_on_home else current_sim_state["away_odd"]
+        for _ in range(random.randint(1, 3)):
 
-        # losujemy stawke
-        stawka = round(random.uniform(10.0, 1500.0), 2)
-        potencjalny_zwrot = round(stawka * aktualny_kurs, 2)
+            # losowanie zakladow graczy
+            bet_on_home = random.choices(
+                [True, False],
+                weights=[
+                    current_sim_state["base_prob_home"],
+                    current_sim_state["base_prob_away"]
+                ],
+                k=1
+            )[0]
 
-        if bet_on_home:
-            current_sim_state["pool_home"] += stawka
+            if bet_on_home:
+                market_type = "HOME_WIN"
+                pozycja = f"Wygrana: {current_sim_state['home_team']}"
+                aktualny_kurs = current_sim_state["home_odd"]
+            else:
+                market_type = "AWAY_WIN"
+                pozycja = f"Wygrana: {current_sim_state['away_team']}"
+                aktualny_kurs = current_sim_state["away_odd"]
+
+            # losujemy stawke
+            stawka = round(random.uniform(10.0, 1500.0), 2)
+            potencjalny_zwrot = round(stawka * aktualny_kurs, 2)
+
+            player_name = f"Player_#{random.randint(1000, 9999)}"
+            transaction_id = f"TX-{uuid.uuid4().hex[:6].upper()}"
+
+            if bet_on_home:
+                current_sim_state["pool_home"] += stawka
+            else:
+                current_sim_state["pool_away"] += stawka
+
+            # Zapisujemy zakład do bazy danych
+            cursor.execute("""
+                INSERT INTO simulation_bets (
+                    simulation_id,
+                    generated_player_name,
+                    transaction_id,
+                    market_type,
+                    stake,
+                    odd_at_bet,
+                    possible_return
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                current_simulation_id,
+                player_name,
+                transaction_id,
+                market_type,
+                stawka,
+                aktualny_kurs,
+                potencjalny_zwrot
+            ))
+
+            # obiekt wirtualnego gracza
+            new_bets.append({
+                "gracz": player_name,
+                "id": transaction_id,
+                "pozycja": pozycja,
+                "stawka": stawka,
+                "zwrot": potencjalny_zwrot
+            })
+
+        # procentowy rozklad
+        total_pool = current_sim_state["pool_home"] + current_sim_state["pool_away"]
+
+        if total_pool > 0:
+            home_percent = int((current_sim_state["pool_home"] / total_pool) * 100)
+            away_percent = 100 - home_percent
         else:
-            current_sim_state["pool_away"] += stawka
+            home_percent = int(current_sim_state["base_prob_home"] * 100)
+            away_percent = int(current_sim_state["base_prob_away"] * 100)
 
-        # obiekt wirtualnego gracza
-        new_bets.append({
-            "gracz": f"Player_#{random.randint(1000, 9999)}",
-            "id": f"TX-{uuid.uuid4().hex[:6].upper()}",
-            "pozycja": pozycja,
-            "stawka": stawka,
-            "zwrot": potencjalny_zwrot
-        })
+        # Wirtualny kapital początkowy bukmachera
+        VIRTUAL_WEIGHT = 500000.0
 
-    # procentowy rozklad
-    total_pool = current_sim_state["pool_home"] + current_sim_state["pool_away"]
-    if total_pool > 0:
-        home_percent = int((current_sim_state["pool_home"] / total_pool) * 100)
-        away_percent = 100 - home_percent
-    else:
-        home_percent = int(current_sim_state["base_prob_home"] * 100)
-        away_percent = int(current_sim_state["base_prob_away"] * 100)
+        virtual_home_pool = current_sim_state["base_prob_home"] * VIRTUAL_WEIGHT
+        virtual_away_pool = current_sim_state["base_prob_away"] * VIRTUAL_WEIGHT
 
-    VIRTUAL_WEIGHT = 500000.0  # Wirtualny kapital początkowy bukmachera
+        blended_home_pool = virtual_home_pool + current_sim_state["pool_home"]
+        blended_away_pool = virtual_away_pool + current_sim_state["pool_away"]
+        blended_total = blended_home_pool + blended_away_pool
 
-    virtual_home_pool = current_sim_state["base_prob_home"] * VIRTUAL_WEIGHT
-    virtual_away_pool = current_sim_state["base_prob_away"] * VIRTUAL_WEIGHT
+        # Przeliczamy nowe prawdopodobieństwo
+        new_prob_home = blended_home_pool / blended_total
+        new_prob_away = blended_away_pool / blended_total
 
-    blended_home_pool = virtual_home_pool + current_sim_state["pool_home"]
-    blended_away_pool = virtual_away_pool + current_sim_state["pool_away"]
-    blended_total = blended_home_pool + blended_away_pool
+        previous_home_odd = current_sim_state["home_odd"]
+        previous_away_odd = current_sim_state["away_odd"]
 
-    # Przeliczamy nowe prawdopodobieństwo
-    new_prob_home = blended_home_pool / blended_total
-    new_prob_away = blended_away_pool / blended_total
+        current_sim_state["home_odd"] = round(0.95 / new_prob_home, 2)
+        current_sim_state["away_odd"] = round(0.95 / new_prob_away, 2)
 
-    current_sim_state["home_odd"] = round(0.95 / new_prob_home, 2)
-    current_sim_state["away_odd"] = round(0.95 / new_prob_away, 2)
+        home_odd = current_sim_state["home_odd"]
+        away_odd = current_sim_state["away_odd"]
 
-    # grading
-    diff = abs(home_percent - (current_sim_state["base_prob_home"] * 100))
-    if diff > 30:
-        ai_accuracy = 45
-    elif diff > 15:
-        ai_accuracy = 65
-    else:
-        ai_accuracy = 82
+        home_change = round(home_odd - previous_home_odd, 2)
+        away_change = round(away_odd - previous_away_odd, 2)
 
-    return {
-        "status": "in progress",
-        "kursy": {
-            "gospodarze": current_sim_state["home_odd"],
-            "goscie": current_sim_state["away_odd"],
-        },
-        "bets": {
-            "gospodarze_proc": home_percent,
-            "goscie_proc": away_percent
-        },
-        "ai accuracy": ai_accuracy,
-        "last transactions": new_bets
-    }
+        home_change_percent = round((home_change / previous_home_odd) * 100, 2) if previous_home_odd != 0 else 0
+        away_change_percent = round((away_change / previous_away_odd) * 100, 2) if previous_away_odd != 0 else 0
+
+        home_trend = "UP" if home_change > 0 else "DOWN" if home_change < 0 else "STABLE"
+        away_trend = "UP" if away_change > 0 else "DOWN" if away_change < 0 else "STABLE"
+
+        # Aktualizujemy tabelę odds
+        cursor.execute("""
+            UPDATE odds
+            SET current_odd = %s,
+                previous_odd = %s,
+                change_value = %s,
+                change_percent = %s,
+                trend = %s
+            WHERE simulation_id = %s AND market_type = 'HOME_WIN'
+        """, (
+            home_odd,
+            previous_home_odd,
+            home_change,
+            home_change_percent,
+            home_trend,
+            current_simulation_id
+        ))
+
+        cursor.execute("""
+            UPDATE odds
+            SET current_odd = %s,
+                previous_odd = %s,
+                change_value = %s,
+                change_percent = %s,
+                trend = %s
+            WHERE simulation_id = %s AND market_type = 'AWAY_WIN'
+        """, (
+            away_odd,
+            previous_away_odd,
+            away_change,
+            away_change_percent,
+            away_trend,
+            current_simulation_id
+        ))
+
+        # Zapisujemy historię kursów
+        cursor.execute("""
+            INSERT INTO odds_history (
+                simulation_id,
+                tick_number,
+                market_type,
+                odd_value,
+                height_percent,
+                opacity_value
+            )
+            VALUES
+            (%s, %s, 'HOME_WIN', %s, %s, %s),
+            (%s, %s, 'AWAY_WIN', %s, %s, %s)
+        """, (
+            current_simulation_id,
+            tick_number,
+            home_odd,
+            50,
+            0.80,
+
+            current_simulation_id,
+            tick_number,
+            away_odd,
+            50,
+            0.80
+        ))
+
+        # Zapisujemy rozkład zakładów
+        cursor.execute("""
+            INSERT INTO bet_distribution_snapshots (
+                simulation_id,
+                tick_number,
+                home_total_amount,
+                away_total_amount,
+                draw_total_amount,
+                home_bets_count,
+                away_bets_count,
+                draw_bets_count,
+                home_percent,
+                away_percent,
+                draw_percent
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (
+            current_simulation_id,
+            tick_number,
+            current_sim_state["pool_home"],
+            current_sim_state["pool_away"],
+            0.00,
+            0,
+            0,
+            0,
+            home_percent,
+            away_percent,
+            0.00
+        ))
+
+        # grading
+        diff = abs(home_percent - (current_sim_state["base_prob_home"] * 100))
+
+        if diff > 30:
+            ai_accuracy = 45
+            risk_level = "HIGH"
+            grade = "C"
+            stability_label = "NISKA STABILNOŚĆ"
+        elif diff > 15:
+            ai_accuracy = 65
+            risk_level = "MEDIUM"
+            grade = "B"
+            stability_label = "ŚREDNIA STABILNOŚĆ"
+        else:
+            ai_accuracy = 82
+            risk_level = "LOW"
+            grade = "A"
+            stability_label = "WYSOKA STABILNOŚĆ"
+
+        cursor.execute("""
+            INSERT INTO grading_results (
+                simulation_id,
+                tick_number,
+                confidence_percent,
+                grade,
+                risk_level,
+                stability_label,
+                model_note
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """, (
+            current_simulation_id,
+            tick_number,
+            ai_accuracy,
+            grade,
+            risk_level,
+            stability_label,
+            "Ocena stabilności modelu na podstawie różnicy między przewidywaniami a rozkładem zakładów."
+        ))
+
+        # Aktualizujemy tick w tabeli simulations
+        cursor.execute("""
+            UPDATE simulations
+            SET current_tick = %s
+            WHERE id = %s
+        """, (
+            tick_number,
+            current_simulation_id
+        ))
+
+        conn.commit()
+
+        return {
+            "status": "in progress",
+            "kursy": {
+                "gospodarze": home_odd,
+                "goscie": away_odd,
+            },
+            "bets": {
+                "gospodarze_proc": home_percent,
+                "goscie_proc": away_percent
+            },
+            "ai accuracy": ai_accuracy,
+            "last transactions": new_bets
+        }
+
+    except Exception as e:
+        conn.rollback()
+        print("Błąd podczas aktualizacji statusu symulacji:", e)
+
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.get("/api/teams")
 def get_teams():
