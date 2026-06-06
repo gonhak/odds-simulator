@@ -116,7 +116,7 @@ def train_ai_model():
     model = CustomNaiveBayes()
     model.fit(X_train, y_train)
 
-    print("4. Testowanie modelu...")
+    print("3. Testowanie modelu...")
     predictions = model.predict(X_test)
 
     # Accuracy

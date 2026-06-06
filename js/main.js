@@ -91,6 +91,8 @@ const startSimulation = () => {
 
       // Odpalamy stoper sekunde
       interval = setInterval(getStatus, 1000);
+
+      resetUI();
   })
   .catch(error => console.error("Błąd połączenia (START):", error));
 };
@@ -115,8 +117,88 @@ const stopSimulation = () => {
 const getStatus = () => {
     fetch('http://127.0.0.1:8000/api/status')
     .then(response => response.json())
-    .then(dane => {
-        console.log("LIVE STATUS:", dane);
+    .then(data => {
+        // Sprawdzamy czy symulacja trwa
+        if (data.status === "in progress") {
+
+            // aktualizacja UI co sekunde
+            const homePercentText = document.querySelectorAll(".main__liveStatsContainer__upperContainer__betsContainer__box__row__percent")[0];
+            const awayPercentText = document.querySelectorAll(".main__liveStatsContainer__upperContainer__betsContainer__box__row__percent")[1];
+
+            if(homePercentText) homePercentText.textContent = data.bets.gospodarze_proc + "%";
+            if(awayPercentText) awayPercentText.textContent = data.bets.goscie_proc + "%";
+
+            const homeProgressBar = document.querySelectorAll(".main__liveStatsContainer__upperContainer__betsContainer__box__line__progress")[0];
+            const awayProgressBar = document.querySelectorAll(".main__liveStatsContainer__upperContainer__betsContainer__box__line__progress")[1];
+
+            if(homeProgressBar) homeProgressBar.style.setProperty('--width', data.bets.gospodarze_proc);
+            if(awayProgressBar) awayProgressBar.style.setProperty('--width', data.bets.goscie_proc);
+
+            const liveHome = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer:nth-child(1) .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__stake");
+            const liveAway = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer--enemy .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__stake");
+
+            if(liveHome) liveHome.textContent = data.kursy.gospodarze.toFixed(2);
+            if(liveAway) liveAway.textContent = data.kursy.goscie.toFixed(2);
+
+            const homeTrendBox = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer:nth-child(1) .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__trendBox");
+            const awayTrendBox = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer--enemy .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__trendBox");
+
+            const setTrend = (trendBox, trend) => {
+                if (!trendBox) return;
+                const icon = trendBox.querySelector("svg");
+                const text = trendBox.querySelector("p");
+
+                if (trend === "up") {
+                    trendBox.style.color = "var(--primary-color, #4edea3)";
+                    text.textContent = "Wzrost";
+                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />';
+                } else if (trend === "down") {
+                    trendBox.style.color = "var(--error-color, #e74c3c)";
+                    text.textContent = "Spadek";
+                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 4.5 15 15m0 0V8.25m0 11.25H8.25" />';
+                } else {
+                    trendBox.style.color = "#ccc";
+                    text.textContent = "Stabilnie";
+                    icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />';
+                }
+            };
+
+            setTrend(homeTrendBox, data.kursy.trend_gospodarze);
+            setTrend(awayTrendBox, data.kursy.trend_goscie);
+
+            // generowanie wirtualnych graczy do tabeli
+            const tableHeader = document.querySelector(".main__liveStatsContainer__historyContainer__table__header");
+
+            if(tableHeader && data['last transactions']) {
+                data['last transactions'].forEach(tx => {
+                    const isEnemy = tx.pozycja.includes(visitorsTeam.textContent) ? "main__liveStatsContainer__historyContainer__table__row__position--enemy" : "";
+                    const rowHTML = `
+                        <div class="main__liveStatsContainer__historyContainer__table__row">
+                          <div class="main__liveStatsContainer__historyContainer__table__row__player">
+                            <div class="main__liveStatsContainer__historyContainer__table__row__player__iconBox">
+                              <svg class="main__liveStatsContainer__historyContainer__table__row__player__iconBox__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0" />
+                              </svg>
+                            </div>
+                            <p class="main__liveStatsContainer__historyContainer__table__row__player__name">${tx.gracz}</p>
+                          </div>
+                          <p class="main__liveStatsContainer__historyContainer__table__row__id">${tx.id}</p>
+                          <p class="main__liveStatsContainer__historyContainer__table__row__position ${isEnemy}">${tx.pozycja}</p>
+                          <p class="main__liveStatsContainer__historyContainer__table__row__stake">${tx.stawka.toFixed(2)} zł</p>
+                          <p class="main__liveStatsContainer__historyContainer__table__row__return">${tx.zwrot.toFixed(2)} zł</p>
+                        </div>
+                    `;
+                    tableHeader.insertAdjacentHTML('afterend', rowHTML);
+                });
+
+                const allRows = document.querySelectorAll(".main__liveStatsContainer__historyContainer__table__row");
+                if (allRows.length > 10) {
+                    for(let i = 10; i < allRows.length; i++) {
+                        allRows[i].remove();
+                    }
+                }
+            }
+        }
     })
     .catch(error => console.error("Błąd pobierania statusu:", error));
 };
@@ -137,66 +219,85 @@ const renderClubs = () => {
   hostsTeam.textContent = premierLeagueClubs[hostsIndex];
   visitorsTeam.textContent = premierLeagueClubs[visitorsIndex];
 };
-
 const changeClub = (team, direction) => {
   if (team === "hosts") {
     let nextIndex = hostsIndex;
-
     do {
       nextIndex += direction;
-
-      if (nextIndex > premierLeagueClubs.length - 1) {
-        nextIndex = 0;
-      }
-
-      if (nextIndex < 0) {
-        nextIndex = premierLeagueClubs.length - 1;
-      }
+      if (nextIndex > premierLeagueClubs.length - 1) nextIndex = 0;
+      if (nextIndex < 0) nextIndex = premierLeagueClubs.length - 1;
     } while (nextIndex === visitorsIndex);
-
     hostsIndex = nextIndex;
   }
 
   if (team === "visitors") {
     let nextIndex = visitorsIndex;
-
     do {
       nextIndex += direction;
-
-      if (nextIndex > premierLeagueClubs.length - 1) {
-        nextIndex = 0;
-      }
-
-      if (nextIndex < 0) {
-        nextIndex = premierLeagueClubs.length - 1;
-      }
+      if (nextIndex > premierLeagueClubs.length - 1) nextIndex = 0;
+      if (nextIndex < 0) nextIndex = premierLeagueClubs.length - 1;
     } while (nextIndex === hostsIndex);
-
     visitorsIndex = nextIndex;
   }
-
   renderClubs();
 };
 
 simulationBtn.addEventListener("click", toggleSimulation);
-
 resetBtn.addEventListener("click", resetSimulation);
+hostsPrevBtn.addEventListener("click", () => changeClub("hosts", -1));
+hostsNextBtn.addEventListener("click", () => changeClub("hosts", 1));
+visitorsPrevBtn.addEventListener("click", () => changeClub("visitors", -1));
+visitorsNextBtn.addEventListener("click", () => changeClub("visitors", 1));
 
-hostsPrevBtn.addEventListener("click", () => {
-  changeClub("hosts", -1);
-});
+const resetUI = () => {
+  const homePercentText = document.querySelectorAll(".main__liveStatsContainer__upperContainer__betsContainer__box__row__percent")[0];
+  const awayPercentText = document.querySelectorAll(".main__liveStatsContainer__upperContainer__betsContainer__box__row__percent")[1];
+  if(homePercentText) homePercentText.textContent = "50%";
+  if(awayPercentText) awayPercentText.textContent = "50%";
 
-hostsNextBtn.addEventListener("click", () => {
-  changeClub("hosts", 1);
-});
+  const homeProgressBar = document.querySelectorAll(".main__liveStatsContainer__upperContainer__betsContainer__box__line__progress")[0];
+  const awayProgressBar = document.querySelectorAll(".main__liveStatsContainer__upperContainer__betsContainer__box__line__progress")[1];
+  if(homeProgressBar) homeProgressBar.style.setProperty('--width', 50);
+  if(awayProgressBar) awayProgressBar.style.setProperty('--width', 50);
 
-visitorsPrevBtn.addEventListener("click", () => {
-  changeClub("visitors", -1);
-});
+  // Czyszczenie tabeli graczy
+  const allRows = document.querySelectorAll(".main__liveStatsContainer__historyContainer__table__row");
+  allRows.forEach(row => row.remove());
 
-visitorsNextBtn.addEventListener("click", () => {
-  changeClub("visitors", 1);
-});
+  // Wyzerowanie kursow na zywo
+  const liveHome = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer:nth-child(1) .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__stake");
+  const liveAway = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer--enemy .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__stake");
+  if(liveHome) liveHome.textContent = "-";
+  if(liveAway) liveAway.textContent = "-";
+
+  // Wyzerowanie trendów
+  const homeTrendBox = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer:nth-child(1) .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__trendBox");
+  const awayTrendBox = document.querySelector(".main__liveStatsContainer__upperContainer__currentStakeContainer--enemy .main__liveStatsContainer__upperContainer__currentStakeContainer__middle__trendBox");
+
+  if(homeTrendBox) {
+      homeTrendBox.style.color = "#ccc";
+      homeTrendBox.querySelector("p").textContent = "-";
+      homeTrendBox.querySelector("svg").innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />';
+  }
+  if(awayTrendBox) {
+      awayTrendBox.style.color = "#ccc";
+      awayTrendBox.querySelector("p").textContent = "-";
+      awayTrendBox.querySelector("svg").innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />';
+  }
+
+  // Resetowanie kolka z ai
+  const aiCircle = document.querySelector(".main__liveStatsContainer__upperContainer__aiContainer__bottom__circle");
+  const aiPercentText = document.querySelector(".main__liveStatsContainer__upperContainer__aiContainer__bottom__circle__inside__percent");
+  const aiStatusText = document.querySelector(".main__liveStatsContainer__upperContainer__aiContainer__bottom__textBox__text");
+
+  if(aiCircle) {
+      aiCircle.style.setProperty('--percent', 0);
+      aiCircle.style.setProperty('--circleColor', '#ccc');
+  }
+  if(aiPercentText) aiPercentText.textContent = "-%";
+  if(aiStatusText) aiStatusText.textContent = "Oczekiwanie na start...";
+};
 
 renderSimulationButton();
 renderClubs();
+resetUI();

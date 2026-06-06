@@ -5,6 +5,9 @@ from db import get_connection
 
 from ai_model import train_ai_model
 
+import random
+import uuid
+
 app = FastAPI()
 
 
@@ -26,6 +29,15 @@ class SimulationConfig(BaseModel):
     ilosc_graczy: int
 
 isSimulationRunning = False
+
+current_sim_state = {
+    "home_team": "",
+    "away_team": "",
+    "home_odd": 0.0,
+    "away_odd": 0.0,
+    "pool_home": 0.0,
+    "pool_away": 0.0
+}
 
 def get_team_id_by_name(cursor, team_name):
     # Pobieramy id drużyny po nazwie
@@ -54,17 +66,6 @@ def start_simulation(config: SimulationConfig):
     chances_away = chances.get('A', 0.33)
 
     # zamiana na kursy
-    odds_home = round(1 / chances_home, 2)
-    odds_away = round(1 / chances_away, 2)
-
-    print("Model zwrócił:", chances)
-    print("Typ danych:", type(chances))
-
-    # Model może zwrócić H, D, A, ale w projekcie nie obsługujemy remisu
-    chances_home = float(chances.get("H", 0.33))
-    chances_away = float(chances.get("A", 0.33))
-
-    # Ponieważ nie uwzględniamy remisu, normalizujemy tylko H i A
     total = chances_home + chances_away
 
     if total <= 0:
@@ -74,15 +75,24 @@ def start_simulation(config: SimulationConfig):
         chances_home = chances_home / total
         chances_away = chances_away / total
 
-    # Marża bukmachera
+    # Marża
     margin = 0.95
 
     # Zamiana prawdopodobieństw na kursy
     odds_home = round(margin / chances_home, 2)
     odds_away = round(margin / chances_away, 2)
 
+    current_sim_state["home_team"] = config.gospodarze
+    current_sim_state["away_team"] = config.goscie
+    current_sim_state["home_odd"] = odds_home
+    current_sim_state["away_odd"] = odds_away
+    current_sim_state["pool_home"] = 0.0
+    current_sim_state["pool_away"] = 0.0
+
+    current_sim_state["base_prob_home"] = chances_home
+    current_sim_state["base_prob_away"] = chances_away
+
     print(f"Mecz: {config.gospodarze} vs {config.goscie}")
-    print(f"Czas: {config.czas_trwania}, gracze: {config.ilosc_graczy}")
     print(f"AI gospodarze: {odds_home}, goscie: {odds_away}")
 
     conn = get_connection()
@@ -105,7 +115,7 @@ def start_simulation(config: SimulationConfig):
                 "message": f"Nie znaleziono drużyny gości w bazie: {config.goscie}"
             }
 
-        # Tworzymy nową symulację
+        # Tworzymy nowa symulację
         cursor.execute("""
             INSERT INTO simulations (
                 home_team_id,
@@ -277,26 +287,87 @@ def stop_simulation():
 
 @app.get("/api/status")
 def get_status():
-    # endpoint co sekunde
-
     if not isSimulationRunning:
         return {"status": "waiting"}
+
+    # losowo 1 do 3 zakladow na sekunde
+    new_bets = []
+    for _ in range(random.randint(1, 3)):
+
+        # losowanie zakladow graczy
+        bet_on_home = random.choices(
+            [True, False],
+            weights=[current_sim_state["base_prob_home"], current_sim_state["base_prob_away"]],
+            k=1
+        )[0]
+
+        pozycja = f"Wygrana: {current_sim_state['home_team']}" if bet_on_home else f"Wygrana: {current_sim_state['away_team']}"
+        aktualny_kurs = current_sim_state["home_odd"] if bet_on_home else current_sim_state["away_odd"]
+
+        # losujemy stawke
+        stawka = round(random.uniform(10.0, 1500.0), 2)
+        potencjalny_zwrot = round(stawka * aktualny_kurs, 2)
+
+        if bet_on_home:
+            current_sim_state["pool_home"] += stawka
+        else:
+            current_sim_state["pool_away"] += stawka
+
+        # obiekt wirtualnego gracza
+        new_bets.append({
+            "gracz": f"Player_#{random.randint(1000, 9999)}",
+            "id": f"TX-{uuid.uuid4().hex[:6].upper()}",
+            "pozycja": pozycja,
+            "stawka": stawka,
+            "zwrot": potencjalny_zwrot
+        })
+
+    # procentowy rozklad
+    total_pool = current_sim_state["pool_home"] + current_sim_state["pool_away"]
+    if total_pool > 0:
+        home_percent = int((current_sim_state["pool_home"] / total_pool) * 100)
+        away_percent = 100 - home_percent
+    else:
+        home_percent = int(current_sim_state["base_prob_home"] * 100)
+        away_percent = int(current_sim_state["base_prob_away"] * 100)
+
+    VIRTUAL_WEIGHT = 500000.0  # Wirtualny kapital początkowy bukmachera
+
+    virtual_home_pool = current_sim_state["base_prob_home"] * VIRTUAL_WEIGHT
+    virtual_away_pool = current_sim_state["base_prob_away"] * VIRTUAL_WEIGHT
+
+    blended_home_pool = virtual_home_pool + current_sim_state["pool_home"]
+    blended_away_pool = virtual_away_pool + current_sim_state["pool_away"]
+    blended_total = blended_home_pool + blended_away_pool
+
+    # Przeliczamy nowe prawdopodobieństwo
+    new_prob_home = blended_home_pool / blended_total
+    new_prob_away = blended_away_pool / blended_total
+
+    current_sim_state["home_odd"] = round(0.95 / new_prob_home, 2)
+    current_sim_state["away_odd"] = round(0.95 / new_prob_away, 2)
+
+    # grading
+    diff = abs(home_percent - (current_sim_state["base_prob_home"] * 100))
+    if diff > 30:
+        ai_accuracy = 45
+    elif diff > 15:
+        ai_accuracy = 65
+    else:
+        ai_accuracy = 82
 
     return {
         "status": "in progress",
         "kursy": {
-            "gospodarze": 1.88,
-            "goscie": 3.45
+            "gospodarze": current_sim_state["home_odd"],
+            "goscie": current_sim_state["away_odd"],
         },
         "bets": {
-            "gospodarze_proc": 65,
-            "goscie_proc": 35
+            "gospodarze_proc": home_percent,
+            "goscie_proc": away_percent
         },
-        "ai accuracy": 82,
-        "last transactions": [
-            {"gracz": "Player_1", "id": "#1001", "pozycja": "Gospodarze", "stawka": 50, "zwrot": 94},
-            {"gracz": "Player_2", "id": "#1002", "pozycja": "Goście", "stawka": 100, "zwrot": 345}
-        ]
+        "ai accuracy": ai_accuracy,
+        "last transactions": new_bets
     }
 
 @app.get("/api/teams")
