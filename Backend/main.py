@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from db import get_connection
 
+#from random_forest_model import train_ai_model
 from ai_model import train_ai_model
 
 import random
@@ -62,11 +63,15 @@ def start_simulation(config: SimulationConfig):
     print("simulation start...")
 
     # wynik AI
+    # Wynik AI
     chances = ai_brain.get_match_probabilities(config.gospodarze, config.goscie)
-    chances_home = chances.get('H', 0.33)
-    chances_away = chances.get('A', 0.33)
 
-    # zamiana na kursy
+    print("Model zwrócił:", chances)
+
+    chances_home = float(chances.get("H", 0.5))
+    chances_away = float(chances.get("A", 0.5))
+
+    # Normalizacja H/A, ponieważ nie obsługujemy remisu
     total = chances_home + chances_away
 
     if total <= 0:
@@ -76,12 +81,29 @@ def start_simulation(config: SimulationConfig):
         chances_home = chances_home / total
         chances_away = chances_away / total
 
-    # Marża
+    # Ograniczenie skrajnych prawdopodobieństw,
+    # żeby Random Forest nie generował absurdalnych kursów typu 1.00 / 40.00
+    min_probability = 0.06
+    max_probability = 0.94
+
+    chances_home = max(min_probability, min(max_probability, chances_home))
+    chances_away = max(min_probability, min(max_probability, chances_away))
+
+    # Ponowna normalizacja po ograniczeniu
+    total = chances_home + chances_away
+    chances_home = chances_home / total
+    chances_away = chances_away / total
+
+    # Marża bukmachera
     margin = 0.95
 
     # Zamiana prawdopodobieństw na kursy
     odds_home = round(margin / chances_home, 2)
     odds_away = round(margin / chances_away, 2)
+
+    # Ograniczenie kursów do zakresu użytecznego dla symulacji
+    odds_home = max(1.01, min(20.00, odds_home))
+    odds_away = max(1.01, min(20.00, odds_away))
 
     current_sim_state["home_team"] = config.gospodarze
     current_sim_state["away_team"] = config.goscie
