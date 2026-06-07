@@ -4,7 +4,9 @@ from pydantic import BaseModel
 from db import get_connection
 
 #from random_forest_model import train_ai_model
-from ai_model import train_ai_model
+#from ai_model import train_ai_model
+#from decision_tree_model import train_ai_model
+from model_comparison import train_ai_model
 
 import random
 import uuid
@@ -675,3 +677,7 @@ def get_teams():
     conn.close()
 
     return teams
+
+@app.get("/api/model/metrics")
+def get_model_metrics():
+    return ai_brain.get_model_metrics()

@@ -29,6 +29,7 @@ class CustomNaiveBayes:
         self.class_priors = {}
         self.feature_probs = {}
         self.classes = []
+        self.accuracy = 0.0
 
     def fit(self, X, y):
         self.classes = np.unique(y)
@@ -102,6 +103,16 @@ class CustomNaiveBayes:
                 final_probs[c] = raw_probs[c] / total_prob
 
         return final_probs
+    
+    def get_model_metrics(self):
+        return {
+            "model": "Custom Naive Bayes",
+            "accuracy": round(self.accuracy, 4),
+            "features": [
+                "HomeTeam",
+                "AwayTeam"
+            ]
+        }
 
 def train_ai_model():
     print("1. Wczytywanie danych...")
@@ -122,8 +133,9 @@ def train_ai_model():
     # Accuracy
     correct = np.sum(predictions == y_test.values)
     accuracy = correct / len(y_test)
+    model.accuracy = accuracy
 
-    print(f"{accuracy * 100:.2f}%")
+    print(f"Naive Bayes accuracy: {accuracy * 100:.2f}%")
 
     return model
 
