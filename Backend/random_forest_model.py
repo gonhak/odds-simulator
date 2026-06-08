@@ -5,16 +5,20 @@ from collections import deque
 import numpy as np
 import pandas as pd
 
-
+RANDOM_SEED = 83 #67 27
 current_dir = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(current_dir, "..", "premier_league.csv")
 
 
 def train_test_split(X, y, test_size=0.2):
+    # Stały seed, żeby wyniki były powtarzalne
+    np.random.seed(RANDOM_SEED)
+    random.seed(RANDOM_SEED)
+    
     # Własny podział danych na zbiór treningowy i testowy
     indices = np.random.permutation(len(X))
     test_count = int(len(X) * test_size)
-
+    
     test_idx = indices[:test_count]
     train_idx = indices[test_count:]
 
@@ -134,7 +138,7 @@ class DecisionTreeNode:
 
 
 class CustomDecisionTree:
-    def __init__(self, max_depth=6, min_samples_split=5, max_features=None):
+    def __init__(self, max_depth=3, min_samples_split=4, max_features=None):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.max_features = max_features
@@ -231,6 +235,10 @@ class CustomDecisionTree:
         )
 
     def fit(self, X, y):
+        # Stały seed, żeby bootstrap i losowanie cech były powtarzalne
+        np.random.seed(RANDOM_SEED)
+        random.seed(RANDOM_SEED)
+        
         self.root = self.build_tree(X, y, 0)
 
     def predict_one(self, x, node):
@@ -247,7 +255,7 @@ class CustomDecisionTree:
 
 
 class CustomRandomForest:
-    def __init__(self, n_trees=100, max_depth=5, min_samples_split=5):
+    def __init__(self, n_trees=100, max_depth=3, min_samples_split=4):
         self.n_trees = n_trees
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
@@ -298,17 +306,20 @@ class CustomRandomForest:
         for tree in self.trees:
             votes.append(tree.predict_one(x, tree.root))
 
-        home_votes = votes.count(1)
-        away_votes = votes.count(0)
+        home_votes = votes.count(0)
+        draw_votes = votes.count(1)
+        away_votes = votes.count(2)
 
-        # Wygładzanie Laplace'a, żeby uniknąć prawdopodobieństwa 0%
+        # Wygładzanie Laplace'a, żeby uniknąć 0%
         home_votes += 2
+        draw_votes += 2
         away_votes += 2
 
-        total_votes = home_votes + away_votes
+        total_votes = home_votes + draw_votes + away_votes
 
         return {
             "H": home_votes / total_votes,
+            "D": draw_votes / total_votes,
             "A": away_votes / total_votes
         }
 
@@ -317,8 +328,8 @@ class RandomForestMatchModel:
     def __init__(self):
         self.model = CustomRandomForest(
             n_trees=100,
-            max_depth=5,
-            min_samples_split=5
+            max_depth=3,
+            min_samples_split=4
         )
 
         self.team_stats = {}
@@ -383,14 +394,15 @@ class RandomForestMatchModel:
             # Tworzymy cechy PRZED aktualizacją statystyk danym meczem
             features = self.create_features_from_stats(home_team, away_team)
 
-            # Ponieważ aplikacja nie obsługuje remisu, do treningu bierzemy tylko H/A
-            if result in ["H", "A"]:
-                X.append(features)
+            # Model uczy się trzech klas: H, D, A
+            X.append(features)
 
-                if result == "H":
-                    y.append(1)
-                else:
-                    y.append(0)
+            if result == "H":
+                y.append(0)
+            elif result == "D":
+                y.append(1)
+            else:
+                y.append(2)
 
             # Po zapisaniu próbki aktualizujemy statystyki drużyn
             update_team_stats(

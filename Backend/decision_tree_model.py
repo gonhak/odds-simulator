@@ -11,7 +11,7 @@ csv_path = os.path.join(current_dir, "..", "premier_league.csv")
 
 def train_test_split(X, y, test_size=0.2):
     # Własny podział danych na zbiór treningowy i testowy
-    np.random.seed(42)
+    np.random.seed(83)
 
     indices = np.random.permutation(len(X))
     test_count = int(len(X) * test_size)
@@ -135,7 +135,7 @@ class DecisionTreeNode:
 
 
 class CustomDecisionTree:
-    def __init__(self, max_depth=5, min_samples_split=5):
+    def __init__(self, max_depth=3, min_samples_split=4):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.root = None
@@ -238,18 +238,25 @@ class CustomDecisionTree:
         return np.array([self.predict_one(x, self.root) for x in X])
 
     def predict_proba_one(self, x):
-        # Dla pojedynczego drzewa prawdopodobieństwo jest mniej stabilne,
-        # więc zwracamy wartość wygładzoną na podstawie predykcji drzewa.
         prediction = self.predict_one(x, self.root)
+
+        if prediction == 0:
+            return {
+                "H": 0.70,
+                "D": 0.15,
+                "A": 0.15
+            }
 
         if prediction == 1:
             return {
-                "H": 0.70,
-                "A": 0.30
+                "H": 0.20,
+                "D": 0.60,
+                "A": 0.20
             }
 
         return {
-            "H": 0.30,
+            "H": 0.15,
+            "D": 0.15,
             "A": 0.70
         }
 
@@ -257,8 +264,8 @@ class CustomDecisionTree:
 class DecisionTreeMatchModel:
     def __init__(self):
         self.model = CustomDecisionTree(
-            max_depth=5,
-            min_samples_split=5
+            max_depth=3,
+            min_samples_split=4
         )
 
         self.team_stats = {}
@@ -323,14 +330,15 @@ class DecisionTreeMatchModel:
             # Tworzymy cechy przed aktualizacją statystyk aktualnym meczem
             features = self.create_features_from_stats(home_team, away_team)
 
-            # Aplikacja nie obsługuje remisu, więc trenujemy tylko na H/A
-            if result in ["H", "A"]:
-                X.append(features)
+            # Model uczy się trzech klas: H, D, A
+            X.append(features)
 
-                if result == "H":
-                    y.append(1)
-                else:
-                    y.append(0)
+            if result == "H":
+                y.append(0)
+            elif result == "D":
+                y.append(1)
+            else:
+                y.append(2)
 
             # Po utworzeniu próbki aktualizujemy historię drużyn
             update_team_stats(

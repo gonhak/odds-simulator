@@ -11,7 +11,7 @@ csv_path = os.path.join(current_dir, "..", "premier_league.csv")
 
 def train_test_split(X, y, test_size=0.2):
 
-    np.random.seed(42)
+    np.random.seed(83)
 
     # Mieszamy indeksy wierszy
     indices = np.random.permutation(len(X))

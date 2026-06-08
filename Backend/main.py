@@ -68,7 +68,8 @@ def start_simulation(config: SimulationConfig):
     chances = ai_brain.get_match_probabilities(config.gospodarze, config.goscie)
 
     print("Model zwrócił:", chances)
-
+    
+    # Model zwraca H, D, A, ale frontend obsługuje tylko kursy dla gospodarzy i gości. Dlatego bierzemy tylko H i A, a następnie normalizujemy je do dwóch wyników.
     chances_home = float(chances.get("H", 0.5))
     chances_away = float(chances.get("A", 0.5))
 
