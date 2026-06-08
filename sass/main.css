@@ -296,7 +296,7 @@ body {
   height: 55px;
   color: #acabaa;
   border: none;
-  cursor: pointer;
+  cursor: not-allowed;
   transition: color 0.3s;
 }
 .main__configurationContainer__bottom__team__container__input:hover, .main__configurationContainer__bottom__team__container__input:focus, .main__configurationContainer__bottom__team__container__input:active {
