@@ -64,7 +64,6 @@ def start_simulation(config: SimulationConfig):
     isSimulationRunning = True
     print("simulation start...")
 
-    # wynik AI
     # Wynik AI
     chances = ai_brain.get_match_probabilities(config.gospodarze, config.goscie)
 
