@@ -2,7 +2,6 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
 import seaborn as sns
 from collections import deque
 
@@ -12,7 +11,7 @@ csv_path = os.path.join(current_dir, "..", "premier_league.csv")
 output_dir = current_dir  # zapisujemy obok skryptu
 
 # ════════════════════════════════════════════════════════════════════════════
-# DECISION TREE – kopiujemy tylko to co potrzebne do predykcji
+# DECISION TREE – TWOJA ORYGINALNA WERSJA (NIEZMIENIONA)
 # ════════════════════════════════════════════════════════════════════════════
 class TeamStats:
     def __init__(self):
@@ -168,24 +167,56 @@ def run_decision_tree():
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# NAIVE BAYES
+# NAIVE BAYES (POPRAWIONY – DYNAMICZNE STATYSTYKI BEZ WYCIEKU DANYCH)
 # ════════════════════════════════════════════════════════════════════════════
 def run_naive_bayes():
     df = pd.read_csv(csv_path, usecols=["HomeTeam","AwayTeam","FTHG","FTAG","FTR"])
 
-    home_stats = df.groupby("HomeTeam").agg({"FTHG":"mean","FTAG":"mean"}).rename(
-        columns={"FTHG":"Scored","FTAG":"Conceded"})
-    away_stats = df.groupby("AwayTeam").agg({"FTAG":"mean","FTHG":"mean"}).rename(
-        columns={"FTAG":"Scored","FTHG":"Conceded"})
+    # Dynamiczne wyliczanie statystyk, aby uniknąć Data Leakage
+    running_stats = {}
+    def get_init_stats():
+        return {"H_scored": 0, "H_conceded": 0, "H_matches": 0,
+                "A_scored": 0, "A_conceded": 0, "A_matches": 0}
 
-    df["HomeAttack"]  = pd.qcut(df["HomeTeam"].map(home_stats["Scored"]),
-                                 q=3, labels=["Weak","Average","Strong"], duplicates="drop")
-    df["AwayAttack"]  = pd.qcut(df["AwayTeam"].map(away_stats["Scored"]),
-                                 q=3, labels=["Weak","Average","Strong"], duplicates="drop")
-    df["HomeDefense"] = pd.qcut(df["HomeTeam"].map(home_stats["Conceded"]),
-                                 q=3, labels=["Strong","Average","Weak"], duplicates="drop")
-    df["AwayDefense"] = pd.qcut(df["AwayTeam"].map(away_stats["Conceded"]),
-                                 q=3, labels=["Strong","Average","Weak"], duplicates="drop")
+    home_attacks, home_defenses = [], []
+    away_attacks, away_defenses = [], []
+
+    for _, row in df.iterrows():
+        h_team = row['HomeTeam']
+        a_team = row['AwayTeam']
+
+        if h_team not in running_stats: running_stats[h_team] = get_init_stats()
+        if a_team not in running_stats: running_stats[a_team] = get_init_stats()
+
+        h_stat = running_stats[h_team]
+        a_stat = running_stats[a_team]
+
+        h_avg_scored = h_stat["H_scored"] / h_stat["H_matches"] if h_stat["H_matches"] > 0 else 1.2
+        h_avg_conceded = h_stat["H_conceded"] / h_stat["H_matches"] if h_stat["H_matches"] > 0 else 1.2
+        a_avg_scored = a_stat["A_scored"] / a_stat["A_matches"] if a_stat["A_matches"] > 0 else 1.2
+        a_avg_conceded = a_stat["A_conceded"] / a_stat["A_matches"] if a_stat["A_matches"] > 0 else 1.2
+
+        home_attacks.append(h_avg_scored)
+        home_defenses.append(h_avg_conceded)
+        away_attacks.append(a_avg_scored)
+        away_defenses.append(a_avg_conceded)
+
+        running_stats[h_team]["H_scored"] += int(row['FTHG'])
+        running_stats[h_team]["H_conceded"] += int(row['FTAG'])
+        running_stats[h_team]["H_matches"] += 1
+        running_stats[a_team]["A_scored"] += int(row['FTAG'])
+        running_stats[a_team]["A_conceded"] += int(row['FTHG'])
+        running_stats[a_team]["A_matches"] += 1
+
+    df['HomeAttack_Raw'] = home_attacks
+    df['HomeDefense_Raw'] = home_defenses
+    df['AwayAttack_Raw'] = away_attacks
+    df['AwayDefense_Raw'] = away_defenses
+
+    df["HomeAttack"]  = pd.qcut(df["HomeAttack_Raw"], q=3, labels=["Weak","Average","Strong"], duplicates="drop")
+    df["AwayAttack"]  = pd.qcut(df["AwayAttack_Raw"], q=3, labels=["Weak","Average","Strong"], duplicates="drop")
+    df["HomeDefense"] = pd.qcut(df["HomeDefense_Raw"], q=3, labels=["Strong","Average","Weak"], duplicates="drop")
+    df["AwayDefense"] = pd.qcut(df["AwayDefense_Raw"], q=3, labels=["Strong","Average","Weak"], duplicates="drop")
 
     X = df[["HomeTeam","AwayTeam","HomeAttack","HomeDefense","AwayAttack","AwayDefense"]]
     y = df["FTR"]
@@ -226,7 +257,7 @@ def run_naive_bayes():
 
 
 # ════════════════════════════════════════════════════════════════════════════
-# GENEROWANIE WYKRESÓW
+# GENEROWANIE WYKRESÓW (ZUNIFIKOWANE MAPOWANIE DLA PLOTÓW)
 # ════════════════════════════════════════════════════════════════════════════
 def confusion_matrix_data(y_true, y_pred, labels):
     cm = np.zeros((len(labels), len(labels)), dtype=int)
@@ -256,20 +287,25 @@ def generate_all_plots():
     print("Trenowanie Naive Bayes...")
     nb_true, nb_pred, nb_acc = run_naive_bayes()
 
-    labels_int = [0, 1, 2]
-    labels_str = ["H", "D", "A"]
+    # Wspólne etykiety dla osi wykresów
     label_names = ["H (Gosp.)", "D (Remis)", "A (Gość)"]
+    labels_str = ["H", "D", "A"]
+
+    # Konwertujemy oryginalne wyniki Drzewa (0,1,2) na stringi ('H','D','A') wyłącznie do wykresów
+    dt_mapping = {0: "H", 1: "D", 2: "A"}
+    dt_true_str = [dt_mapping[x] for x in dt_true]
+    dt_pred_str = [dt_mapping[x] for x in dt_pred]
 
     # ── 1. Confusion matrices obok siebie ───────────────────────────────────
     fig, axes = plt.subplots(1, 2, figsize=(13, 5))
     fig.suptitle("Macierze konfuzji – porównanie modeli", fontsize=15, fontweight="bold", y=1.02)
 
-    cm_dt = confusion_matrix_data(dt_true.tolist(), dt_pred.tolist(), labels_int)
-    cm_nb_raw = confusion_matrix_data(nb_true.tolist(), nb_pred.tolist(), labels_str)
+    cm_dt = confusion_matrix_data(dt_true_str, dt_pred_str, labels_str)
+    cm_nb = confusion_matrix_data(nb_true.tolist(), nb_pred.tolist(), labels_str)
 
     plot_confusion_matrix(axes[0], cm_dt, label_names,
                           f"Decision Tree  (acc = {dt_acc*100:.1f}%)", "Greens")
-    plot_confusion_matrix(axes[1], cm_nb_raw, label_names,
+    plot_confusion_matrix(axes[1], cm_nb, label_names,
                           f"Naive Bayes  (acc = {nb_acc*100:.1f}%)", "Blues")
 
     plt.tight_layout()
@@ -285,7 +321,6 @@ def generate_all_plots():
     colors = ["#2ecc71", "#3498db"]
     bars = ax.bar(models, accs, color=colors, width=0.45, edgecolor="white", linewidth=1.5)
 
-    # linia baseline
     ax.axhline(y=46, color="gray", linestyle="--", linewidth=1.2, label="Baseline (zawsze H) ~46%")
     ax.axhline(y=33, color="salmon", linestyle="--", linewidth=1.2, label="Losowe zgadywanie ~33%")
 
@@ -306,7 +341,7 @@ def generate_all_plots():
     plt.close()
     print(f"Zapisano: {path2}")
 
-    # ── 3. Rozkład predykcji – czy model jest bias? ─────────────────────────
+    # ── 3. Rozkład predykcji – bar chart ────────────────────────────────────
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     fig.suptitle("Rozkład predykcji – czy model faworyzuje jedną klasę?",
                  fontsize=14, fontweight="bold")
@@ -317,33 +352,30 @@ def generate_all_plots():
         for v, c in zip(vals, cnts): d[v] = c
         return d
 
-    dt_dist = pred_dist(dt_pred, labels_int)
-    nb_dist = pred_dist(nb_pred, labels_str)
+    dt_dist = pred_dist(dt_pred_str, labels_str)
+    nb_dist = pred_dist(nb_pred.tolist(), labels_str)
 
-    # Decision Tree
-    axes[0].bar(label_names, [dt_dist[k] for k in labels_int],
+    # Decision Tree Plot
+    axes[0].bar(label_names, [dt_dist[k] for k in labels_str],
                 color=["#2ecc71","#f1c40f","#e74c3c"], edgecolor="white", linewidth=1.2)
     axes[0].set_title("Decision Tree", fontsize=13, fontweight="bold")
     axes[0].set_ylabel("Liczba predykcji", fontsize=11)
     axes[0].tick_params(labelsize=10)
 
-    # Naive Bayes
-    axes[1].bar(label_names, [nb_dist.get(k, 0) for k in labels_str],
+    # Naive Bayes Plot
+    axes[1].bar(label_names, [nb_dist[k] for k in labels_str],
                 color=["#3498db","#9b59b6","#e67e22"], edgecolor="white", linewidth=1.2)
     axes[1].set_title("Naive Bayes", fontsize=13, fontweight="bold")
     axes[1].set_ylabel("Liczba predykcji", fontsize=11)
     axes[1].tick_params(labelsize=10)
 
     plt.tight_layout()
-    path3 = os.path.join(output_dir, "prediction_distribution.png")
+    path3 = os.path.join(output_dir, "accuracy_comparison.png" if "accuracy_comparison.png" == "prediction_distribution.png" else "prediction_distribution.png")
     plt.savefig(path3, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"Zapisano: {path3}")
 
-    print("\nWszystkie wykresy wygenerowane!")
-    print(f"  {path1}")
-    print(f"  {path2}")
-    print(f"  {path3}")
+    print("\nWszystkie wykresy wygenerowane pomyślnie!")
 
 
 if __name__ == "__main__":
