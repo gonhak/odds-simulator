@@ -5,14 +5,25 @@ from db import get_connection
 
 #from random_forest_model import train_ai_model
 #from ai_model import train_ai_model
-#from decision_tree_model import train_ai_model
-from model_comparison import train_ai_model
+from decision_tree_model import train_ai_model
+#from model_comparison import train_ai_model
 
 import random
 import uuid
 
 app = FastAPI()
 
+TEAM_NAME_MAP = {
+    "Manchester City": "Man City",
+}
+
+# Маппинг названий: CSV → БД
+DB_NAME_MAP = {
+    "Man City": "Manchester City",
+    "Manchester United": "Man United",
+    "Nottingham Forest": "Nott'm Forest", 
+    "Nott'm Forest": "Nott'm Forest", 
+}
 
 # uczymy ai zaraz po wlaczeniu serwera
 ai_brain = train_ai_model()
@@ -44,35 +55,36 @@ current_sim_state = {
 }
 
 def get_team_id_by_name(cursor, team_name):
-    # Pobieramy id drużyny po nazwie
-    cursor.execute("""
-        SELECT id
-        FROM teams
-        WHERE name = %s
-    """, (team_name,))
-
+    mapped_name = DB_NAME_MAP.get(team_name, team_name)
+    print(f"Ищем команду: '{team_name}' → mapped: '{mapped_name}'")
+    cursor.execute("SELECT id FROM teams WHERE name = %s", (mapped_name,))
     team = cursor.fetchone()
-
-    if team is None:
-        return None
-
-    return team["id"]
+    print(f"Результат: {team}")
+    return team["id"] if team else None
 
 @app.post("/api/start")
 def start_simulation(config: SimulationConfig):
+    
+    home_for_model = TEAM_NAME_MAP.get(config.gospodarze, config.gospodarze)
+    away_for_model = TEAM_NAME_MAP.get(config.goscie, config.goscie)
+    chances = ai_brain.get_match_probabilities(home_for_model, away_for_model)
+    
     global isSimulationRunning
     isSimulationRunning = True
     print("simulation start...")
-
-    # Wynik AI
-    chances = ai_brain.get_match_probabilities(config.gospodarze, config.goscie)
-
-    print("Model zwrócił:", chances)
     
     # Model zwraca H, D, A, ale frontend obsługuje tylko kursy dla gospodarzy i gości. Dlatego bierzemy tylko H i A, a następnie normalizujemy je do dwóch wyników.
-    chances_home = float(chances.get("H", 0.5))
-    chances_away = float(chances.get("A", 0.5))
+    chances_h = float(chances.get("H", 0.33))
+    chances_a = float(chances.get("A", 0.33))
 
+    # Сглаживание — смешиваем с равномерным распределением
+    alpha = 0.25
+    chances_home = alpha * 0.33 + (1 - alpha) * chances_h
+    chances_away = alpha * 0.33 + (1 - alpha) * chances_a
+
+    print(f"Команды: {config.gospodarze} vs {config.goscie}")
+    print(f"Вероятности модели: {chances}")     
+    
     # Normalizacja H/A, ponieważ nie obsługujemy remisu
     total = chances_home + chances_away
 

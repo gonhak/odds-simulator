@@ -10,16 +10,15 @@ csv_path = os.path.join(current_dir, "..", "premier_league.csv")
 
 
 def train_test_split(X, y, test_size=0.2):
-    # Własny podział danych na zbiór treningowy i testowy
-    np.random.seed(83)
+    split_idx = int(len(X) * (1 - test_size))
 
-    indices = np.random.permutation(len(X))
-    test_count = int(len(X) * test_size)
+    X_train = X[:split_idx]
+    X_test = X[split_idx:]
 
-    test_idx = indices[:test_count]
-    train_idx = indices[test_count:]
+    y_train = y[:split_idx]
+    y_test = y[split_idx:]
 
-    return X[train_idx], X[test_idx], y[train_idx], y[test_idx]
+    return X_train, X_test, y_train, y_test
 
 
 class TeamStats:
@@ -126,18 +125,28 @@ def update_team_stats(home_stats, away_stats, home_goals, away_goals, result):
 
 
 class DecisionTreeNode:
-    def __init__(self, feature_index=None, threshold=None, left=None, right=None, value=None):
+    def __init__(
+        self,
+        feature_index=None,
+        threshold=None,
+        left=None,
+        right=None,
+        value=None,
+        class_probs=None
+    ):
         self.feature_index = feature_index
         self.threshold = threshold
         self.left = left
         self.right = right
         self.value = value
+        self.class_probs = class_probs
 
 
 class CustomDecisionTree:
-    def __init__(self, max_depth=3, min_samples_split=4):
+    def __init__(self, max_depth=6, min_samples_split=4, min_samples_leaf=2):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
         self.root = None
 
     def gini(self, y):
@@ -151,17 +160,33 @@ class CustomDecisionTree:
         return 1 - np.sum(probabilities ** 2)
 
     def majority_class(self, y):
+        # Najczęściej występująca klasa w danym węźle
         classes, counts = np.unique(y, return_counts=True)
         return classes[np.argmax(counts)]
+
+    def class_distribution(self, y):
+        # Rozkład klas w liściu drzewa
+        # 0 = H, 1 = D, 2 = A
+        counts = np.bincount(y, minlength=3)
+
+        # Wygładzanie Laplace'a, żeby uniknąć prawdopodobieństwa 0
+        counts = counts + 1
+
+        probabilities = counts / np.sum(counts)
+
+        return probabilities
 
     def find_thresholds(self, values):
         # Wybieramy kilka progów zamiast testować każdą możliwą wartość
         unique_values = np.unique(values)
 
-        if len(unique_values) <= 6:
+        if len(unique_values) <= 10:
             return unique_values
 
-        return np.percentile(unique_values, [20, 40, 60, 80])
+        return np.percentile(
+            unique_values,
+            [10, 20, 30, 40, 50, 60, 70, 80, 90]
+        )
 
     def best_split(self, X, y):
         best_feature = None
@@ -180,7 +205,10 @@ class CustomDecisionTree:
                 y_left = y[left_mask]
                 y_right = y[right_mask]
 
-                if len(y_left) == 0 or len(y_right) == 0:
+                if len(y_left) < self.min_samples_leaf:
+                    continue
+
+                if len(y_right) < self.min_samples_leaf:
                     continue
 
                 weighted_gini = (
@@ -202,12 +230,18 @@ class CustomDecisionTree:
             or len(y) < self.min_samples_split
             or len(np.unique(y)) == 1
         ):
-            return DecisionTreeNode(value=self.majority_class(y))
+            return DecisionTreeNode(
+                value=self.majority_class(y),
+                class_probs=self.class_distribution(y)
+            )
 
         feature_index, threshold = self.best_split(X, y)
 
         if feature_index is None:
-            return DecisionTreeNode(value=self.majority_class(y))
+            return DecisionTreeNode(
+                value=self.majority_class(y),
+                class_probs=self.class_distribution(y)
+            )
 
         left_mask = X[:, feature_index] <= threshold
         right_mask = X[:, feature_index] > threshold
@@ -226,46 +260,41 @@ class CustomDecisionTree:
         self.root = self.build_tree(X, y, 0)
 
     def predict_one(self, x, node):
-        if node.value is not None:
+        if node.left is None and node.right is None:
             return node.value
-
         if x[node.feature_index] <= node.threshold:
             return self.predict_one(x, node.left)
-
         return self.predict_one(x, node.right)
 
     def predict(self, X):
         return np.array([self.predict_one(x, self.root) for x in X])
 
-    def predict_proba_one(self, x):
-        prediction = self.predict_one(x, self.root)
+    def predict_proba_one(self, x, node=None):
+        # Zwracamy prawdopodobieństwa na podstawie rozkładu klas w liściu
+        if node is None:
+            node = self.root
 
-        if prediction == 0:
+        if node.value is not None:
+            probabilities = node.class_probs
+
             return {
-                "H": 0.70,
-                "D": 0.15,
-                "A": 0.15
+                "H": float(probabilities[0]),
+                "D": float(probabilities[1]),
+                "A": float(probabilities[2])
             }
 
-        if prediction == 1:
-            return {
-                "H": 0.20,
-                "D": 0.60,
-                "A": 0.20
-            }
+        if x[node.feature_index] <= node.threshold:
+            return self.predict_proba_one(x, node.left)
 
-        return {
-            "H": 0.15,
-            "D": 0.15,
-            "A": 0.70
-        }
+        return self.predict_proba_one(x, node.right)
 
 
 class DecisionTreeMatchModel:
     def __init__(self):
         self.model = CustomDecisionTree(
-            max_depth=3,
-            min_samples_split=4
+            max_depth=6,
+            min_samples_split=4,
+            min_samples_leaf=2
         )
 
         self.team_stats = {}
@@ -309,12 +338,8 @@ class DecisionTreeMatchModel:
 
         df = pd.read_csv(
             csv_path,
-            usecols=["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR"]
+            usecols=["HomeTeam", "AwayTeam", "FTHG", "FTAG", "FTR"]
         )
-
-        df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, errors="coerce")
-        df = df.dropna(subset=["Date"])
-        df = df.sort_values("Date")
 
         X = []
         y = []
@@ -352,6 +377,7 @@ class DecisionTreeMatchModel:
         return np.array(X), np.array(y)
 
     def fit(self):
+        self.team_stats = {}
         X, y = self.prepare_training_data()
 
         print("2. Podział danych na train/test...")
@@ -362,6 +388,9 @@ class DecisionTreeMatchModel:
 
         print("4. Testowanie Decision Tree...")
         predictions = self.model.predict(X_test)
+        
+        print("Tree true classes:", np.unique(y_test, return_counts=True))
+        print("Tree predicted classes:", np.unique(predictions, return_counts=True))
 
         correct = np.sum(predictions == y_test)
         self.accuracy = correct / len(y_test)
@@ -377,6 +406,8 @@ class DecisionTreeMatchModel:
             "model": "Custom Decision Tree",
             "accuracy": round(self.accuracy, 4),
             "max_depth": self.model.max_depth,
+            "min_samples_split": self.model.min_samples_split,
+            "min_samples_leaf": self.model.min_samples_leaf,
             "features": [
                 "home_form_last_5",
                 "away_form_last_5",

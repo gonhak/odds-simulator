@@ -5,24 +5,20 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+RANDOM_SEED= 83
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(current_dir, "..", "premier_league.csv")
 
 
 def train_test_split(X, y, test_size=0.2):
+    split_idx = int(len(X) * (1 - test_size))
 
-    np.random.seed(83)
+    X_train = X.iloc[:split_idx]
+    X_test = X.iloc[split_idx:]
 
-    # Mieszamy indeksy wierszy
-    indices = np.random.permutation(len(X))
-    test_size_count = int(len(X) * test_size)
-
-    # Dzielimy indeksy
-    test_idx = indices[:test_size_count]
-    train_idx = indices[test_size_count:]
-
-    X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-    y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+    y_train = y.iloc[:split_idx]
+    y_test = y.iloc[split_idx:]
 
     return X_train, X_test, y_train, y_test
 
@@ -202,7 +198,10 @@ def train_ai_model(show_plots=False):
     print("3. Testowanie modelu...")
     predictions = model.predict(X_test)
 
-
+    print("Bayes true classes:", np.unique(y_test.values, return_counts=True))
+    print("Bayes predicted classes:", np.unique(predictions, return_counts=True))
+    
+    
     # Accuracy
     correct = np.sum(predictions == y_test.values)
     accuracy = correct / len(y_test)
@@ -216,4 +215,4 @@ def train_ai_model(show_plots=False):
     return model
 
 if __name__ == "__main__":
-    train_ai_model(show_plots=True)
+    train_ai_model(show_plots=False)
