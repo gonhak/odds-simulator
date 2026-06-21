@@ -137,7 +137,8 @@ CREATE TABLE bets (
     ) NOT NULL,
 
     stake DECIMAL(12,2) NOT NULL,
-
+	odd_at_bet DECIMAL(8,2) NOT NULL,
+    
     CONSTRAINT fk_bets_tick
         FOREIGN KEY (tick_id)
         REFERENCES simulation_ticks(id)

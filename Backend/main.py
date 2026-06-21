@@ -393,7 +393,8 @@ def get_status():
         bets_to_save.append(
             (
                 market_type,
-                stawka
+                stawka,
+                aktualny_kurs
             )
         )
 
@@ -501,16 +502,18 @@ def get_status():
             INSERT INTO bets (
                 tick_id,
                 market_type,
-                stake
+                stake,
+                odd_at_bet
             )
-            VALUES (%s, %s, %s)
+            VALUES (%s, %s, %s,%s)
         """, [
             (
                 tick_id,
                 market_type,
-                stake
+                stake,
+                odd_at_bet
             )
-            for market_type, stake in bets_to_save
+            for market_type, stake, odd_at_bet in bets_to_save
         ])
 
         conn.commit()

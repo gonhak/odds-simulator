@@ -98,12 +98,13 @@ SET @tick_1_id = LAST_INSERT_ID();
 INSERT INTO bets (
     tick_id,
     market_type,
-    stake
+    stake,
+    odd_at_bet
 )
 VALUES
-(@tick_1_id, 'HOME_WIN', 1200.00),
-(@tick_1_id, 'HOME_WIN', 850.00),
-(@tick_1_id, 'AWAY_WIN', 2000.00);
+(@tick_1_id, 'HOME_WIN', 1200.00, 1.53),
+(@tick_1_id, 'HOME_WIN', 850.00, 1.53),
+(@tick_1_id, 'AWAY_WIN', 2000.00, 2.50);
 
 UPDATE simulations
 SET
