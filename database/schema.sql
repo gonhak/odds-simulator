@@ -1,231 +1,151 @@
-CREATE DATABASE IF NOT EXISTS insight_betting_simulator
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
+DROP DATABASE IF EXISTS bookie_db;
 
-USE insight_betting_simulator;
+CREATE DATABASE bookie_db
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
 
-DROP TABLE IF EXISTS grading_results;
-DROP TABLE IF EXISTS bet_distribution_snapshots;
-DROP TABLE IF EXISTS simulation_bets;
-DROP TABLE IF EXISTS odds_history;
-DROP TABLE IF EXISTS odds;
-DROP TABLE IF EXISTS simulation_settings;
-DROP TABLE IF EXISTS simulations;
-DROP TABLE IF EXISTS teams;
+USE bookie_db;
 
 CREATE TABLE teams (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    short_name VARCHAR(20),
-    logo_url VARCHAR(255),
-    primary_color VARCHAR(20),
-    secondary_color VARCHAR(20),
-    strength_rating DECIMAL(5,2) DEFAULT 50.00,
-    form_rating DECIMAL(5,2) DEFAULT 50.00,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    name VARCHAR(100) NOT NULL,
+    short_name VARCHAR(10) NOT NULL,
+
+    CONSTRAINT uq_teams_name
+        UNIQUE (name),
+
+    CONSTRAINT uq_teams_short_name
+        UNIQUE (short_name)
+)
+ENGINE = InnoDB;
+
+CREATE TABLE matchups (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    home_team_id INT UNSIGNED NOT NULL,
+    away_team_id INT UNSIGNED NOT NULL,
+
+    CONSTRAINT fk_matchups_home_team
+        FOREIGN KEY (home_team_id)
+        REFERENCES teams(id)
+        ON DELETE RESTRICT,
+
+    CONSTRAINT fk_matchups_away_team
+        FOREIGN KEY (away_team_id)
+        REFERENCES teams(id)
+        ON DELETE RESTRICT,
+
+    CONSTRAINT uq_matchups_teams
+        UNIQUE (home_team_id, away_team_id),
+
+    CONSTRAINT chk_matchups_different_teams
+        CHECK (home_team_id <> away_team_id)
+)
+ENGINE = InnoDB;
 
 CREATE TABLE simulations (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
-    home_team_id INT NOT NULL,
-    away_team_id INT NOT NULL,
+    matchup_id INT UNSIGNED NOT NULL,
 
-    players_count INT DEFAULT 100,
-    duration_seconds INT DEFAULT 60,
+    base_home_probability DECIMAL(7,6) NOT NULL,
+    base_away_probability DECIMAL(7,6) NOT NULL,
 
-    status ENUM('CREATED', 'RUNNING', 'FINISHED', 'CANCELED') DEFAULT 'CREATED',
+    status ENUM(
+        'RUNNING',
+        'FINISHED'
+    ) NOT NULL DEFAULT 'RUNNING',
 
-    current_tick INT DEFAULT 0,
-    total_ticks INT DEFAULT 60,
-    update_speed_ms INT DEFAULT 1000,
+    started_at DATETIME(3)
+        NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    volatility DECIMAL(5,2) DEFAULT 1.00,
+    finished_at DATETIME(3) NULL,
 
-    started_at DATETIME NULL,
-    finished_at DATETIME NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_simulations_matchup
+        FOREIGN KEY (matchup_id)
+        REFERENCES matchups(id)
+        ON DELETE RESTRICT,
 
-    CONSTRAINT fk_simulations_home_team
-        FOREIGN KEY (home_team_id) REFERENCES teams(id),
+    CONSTRAINT chk_simulations_home_probability
+        CHECK (
+            base_home_probability BETWEEN 0 AND 1
+        ),
 
-    CONSTRAINT fk_simulations_away_team
-        FOREIGN KEY (away_team_id) REFERENCES teams(id)
-);
+    CONSTRAINT chk_simulations_away_probability
+        CHECK (
+            base_away_probability BETWEEN 0 AND 1
+        ),
 
-CREATE TABLE simulation_settings (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    CONSTRAINT chk_simulations_probability_sum
+        CHECK (
+            base_home_probability + base_away_probability
+            BETWEEN 0.999900 AND 1.000100
+        ),
 
-    simulation_id INT NOT NULL UNIQUE,
+    CONSTRAINT chk_simulations_status
+        CHECK (
+            (
+                status = 'RUNNING'
+                AND finished_at IS NULL
+            )
+            OR
+            (
+                status = 'FINISHED'
+                AND finished_at IS NOT NULL
+            )
+        )
+)
+ENGINE = InnoDB;
 
-    min_odd DECIMAL(6,2) DEFAULT 1.01,
-    max_odd DECIMAL(6,2) DEFAULT 10.00,
+CREATE TABLE simulation_ticks (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
-    initial_home_odd DECIMAL(6,2) DEFAULT 1.80,
-    initial_away_odd DECIMAL(6,2) DEFAULT 2.20,
+    simulation_id INT UNSIGNED NOT NULL,
+    tick_number INT UNSIGNED NOT NULL,
 
-    max_odd_change_per_tick DECIMAL(6,2) DEFAULT 0.10,
+    home_odd DECIMAL(8,2) NOT NULL,
+    away_odd DECIMAL(8,2) NOT NULL,
 
-    min_stake DECIMAL(10,2) DEFAULT 10.00,
-    max_stake DECIMAL(10,2) DEFAULT 2000.00,
+    created_at DATETIME(3)
+        NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    min_opacity DECIMAL(4,2) DEFAULT 0.20,
-    max_opacity DECIMAL(4,2) DEFAULT 1.00,
-
-    min_chart_height INT DEFAULT 10,
-    max_chart_height INT DEFAULT 100,
-
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_settings_simulation
-        FOREIGN KEY (simulation_id) REFERENCES simulations(id)
-        ON DELETE CASCADE
-);
-
-CREATE TABLE odds (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-
-    simulation_id INT NOT NULL,
-
-    market_type ENUM('HOME_WIN', 'AWAY_WIN', 'DRAW') NOT NULL,
-
-    current_odd DECIMAL(6,2) NOT NULL,
-    previous_odd DECIMAL(6,2),
-    change_value DECIMAL(6,2),
-    change_percent DECIMAL(6,2),
-
-    trend ENUM('UP', 'DOWN', 'STABLE') DEFAULT 'STABLE',
-
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_odds_simulation
-        FOREIGN KEY (simulation_id) REFERENCES simulations(id)
+    CONSTRAINT fk_ticks_simulation
+        FOREIGN KEY (simulation_id)
+        REFERENCES simulations(id)
         ON DELETE CASCADE,
 
-    CONSTRAINT uq_odds_simulation_market
-        UNIQUE (simulation_id, market_type)
-);
+    CONSTRAINT uq_ticks_simulation_number
+        UNIQUE (simulation_id, tick_number),
 
-CREATE TABLE odds_history (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    CONSTRAINT chk_ticks_home_odd
+        CHECK (home_odd >= 1.00),
 
-    simulation_id INT NOT NULL,
+    CONSTRAINT chk_ticks_away_odd
+        CHECK (away_odd >= 1.00)
+)
+ENGINE = InnoDB;
 
-    tick_number INT NOT NULL,
-    market_type ENUM('HOME_WIN', 'AWAY_WIN', 'DRAW') NOT NULL,
+CREATE TABLE bets (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 
-    odd_value DECIMAL(6,2) NOT NULL,
+    tick_id INT UNSIGNED NOT NULL,
 
-    height_percent INT,
-    opacity_value DECIMAL(4,2),
+    market_type ENUM(
+        'HOME_WIN',
+        'AWAY_WIN'
+    ) NOT NULL,
 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    stake DECIMAL(12,2) NOT NULL,
 
-    CONSTRAINT fk_odds_history_simulation
-        FOREIGN KEY (simulation_id) REFERENCES simulations(id)
-        ON DELETE CASCADE
-);
-
-CREATE TABLE simulation_bets (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-
-    simulation_id INT NOT NULL,
-
-    generated_player_name VARCHAR(100) NOT NULL,
-    transaction_id VARCHAR(100) NOT NULL,
-
-    market_type ENUM('HOME_WIN', 'AWAY_WIN', 'DRAW') NOT NULL,
-
-    stake DECIMAL(10,2) NOT NULL,
-    odd_at_bet DECIMAL(6,2) NOT NULL,
-    possible_return DECIMAL(10,2) NOT NULL,
-
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_bets_simulation
-        FOREIGN KEY (simulation_id) REFERENCES simulations(id)
+    CONSTRAINT fk_bets_tick
+        FOREIGN KEY (tick_id)
+        REFERENCES simulation_ticks(id)
         ON DELETE CASCADE,
 
-    CONSTRAINT uq_transaction_id
-        UNIQUE (transaction_id)
-);
+    CONSTRAINT chk_bets_stake
+        CHECK (stake > 0)
+)
+ENGINE = InnoDB;
 
-CREATE TABLE bet_distribution_snapshots (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-
-    simulation_id INT NOT NULL,
-
-    tick_number INT NOT NULL,
-
-    home_total_amount DECIMAL(12,2) DEFAULT 0.00,
-    away_total_amount DECIMAL(12,2) DEFAULT 0.00,
-    draw_total_amount DECIMAL(12,2) DEFAULT 0.00,
-
-    home_bets_count INT DEFAULT 0,
-    away_bets_count INT DEFAULT 0,
-    draw_bets_count INT DEFAULT 0,
-
-    home_percent DECIMAL(5,2) DEFAULT 0.00,
-    away_percent DECIMAL(5,2) DEFAULT 0.00,
-    draw_percent DECIMAL(5,2) DEFAULT 0.00,
-
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_distribution_simulation
-        FOREIGN KEY (simulation_id) REFERENCES simulations(id)
-        ON DELETE CASCADE
-);
-
-CREATE TABLE grading_results (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-
-    simulation_id INT NOT NULL,
-
-    tick_number INT NOT NULL,
-
-    confidence_percent DECIMAL(5,2) DEFAULT 0.00,
-
-    grade VARCHAR(10),
-    risk_level ENUM('LOW', 'MEDIUM', 'HIGH') DEFAULT 'MEDIUM',
-    stability_label VARCHAR(100),
-
-    model_note TEXT,
-
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_grading_simulation
-        FOREIGN KEY (simulation_id) REFERENCES simulations(id)
-        ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS historical_matches (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-
-    match_date DATE,
-    home_team_id INT NOT NULL,
-    away_team_id INT NOT NULL,
-
-    home_goals INT,
-    away_goals INT,
-    result ENUM('H', 'D', 'A'),
-
-    home_shots INT,
-    away_shots INT,
-    home_shots_target INT,
-    away_shots_target INT,
-
-    b365_home_odd DECIMAL(6,2),
-    b365_draw_odd DECIMAL(6,2),
-    b365_away_odd DECIMAL(6,2),
-
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_hist_home_team
-        FOREIGN KEY (home_team_id) REFERENCES teams(id),
-
-    CONSTRAINT fk_hist_away_team
-        FOREIGN KEY (away_team_id) REFERENCES teams(id),
-
-    CONSTRAINT uq_historical_match
-        UNIQUE (match_date, home_team_id, away_team_id)
-);
+SHOW TABLES;

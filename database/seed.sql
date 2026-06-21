@@ -1,80 +1,164 @@
-USE insight_betting_simulator;
+USE bookie_db;
 
-INSERT INTO teams 
-(name, short_name, logo_url, primary_color, secondary_color, strength_rating, form_rating)
+INSERT IGNORE INTO teams (name, short_name)
 VALUES
-('Chelsea', 'CHE', NULL, '#034694', '#FFFFFF', 82.50, 76.00),
-('Brentford', 'BRE', NULL, '#E30613', '#FFFFFF', 68.00, 64.00),
-('Arsenal', 'ARS', NULL, '#EF0107', '#FFFFFF', 85.00, 81.00),
-('Liverpool', 'LIV', NULL, '#C8102E', '#FFFFFF', 86.00, 83.00),
-('Manchester City', 'MCI', NULL, '#6CABDD', '#FFFFFF', 90.00, 87.00);
+('Arsenal', 'ARS'),
+('Aston Villa', 'AVL'),
+('Bournemouth', 'BOU'),
+('Brentford', 'BRE'),
+('Brighton', 'BHA'),
+('Burnley', 'BUR'),
+('Chelsea', 'CHE'),
+('Crystal Palace', 'CRY'),
+('Everton', 'EVE'),
+('Fulham', 'FUL'),
+('Liverpool', 'LIV'),
+('Luton', 'LUT'),
+('Manchester City', 'MCI'),
+('Manchester United', 'MUN'),
+('Newcastle', 'NEW'),
+('Nottingham Forest', 'NFO'),
+('Sheffield United', 'SHU'),
+('Tottenham', 'TOT'),
+('West Ham', 'WHU'),
+('Wolves', 'WOL');
 
-INSERT INTO simulations
-(home_team_id, away_team_id, players_count, duration_seconds, status, total_ticks, update_speed_ms, volatility)
+SET @home_team_id = (
+    SELECT id
+    FROM teams
+    WHERE name = 'Chelsea'
+);
+
+SET @away_team_id = (
+    SELECT id
+    FROM teams
+    WHERE name = 'Brentford'
+);
+
+
+INSERT IGNORE INTO matchups (
+    home_team_id,
+    away_team_id
+)
+VALUES (
+    @home_team_id,
+    @away_team_id
+);
+
+SET @matchup_id = (
+    SELECT id
+    FROM matchups
+    WHERE home_team_id = @home_team_id
+      AND away_team_id = @away_team_id
+);
+
+INSERT INTO simulations (
+    matchup_id,
+    base_home_probability,
+    base_away_probability,
+    status
+)
+VALUES (
+    @matchup_id,
+    0.620000,
+    0.380000,
+    'RUNNING'
+);
+
+SET @simulation_id = LAST_INSERT_ID();
+
+INSERT INTO simulation_ticks (
+    simulation_id,
+    tick_number,
+    home_odd,
+    away_odd
+)
+VALUES (
+    @simulation_id,
+    0,
+    1.53,
+    2.50
+);
+
+INSERT INTO simulation_ticks (
+    simulation_id,
+    tick_number,
+    home_odd,
+    away_odd
+)
+VALUES (
+    @simulation_id,
+    1,
+    1.55,
+    2.45
+);
+
+SET @tick_1_id = LAST_INSERT_ID();
+
+INSERT INTO bets (
+    tick_id,
+    market_type,
+    stake
+)
 VALUES
-(1, 2, 120, 60, 'CREATED', 60, 1000, 1.20);
+(@tick_1_id, 'HOME_WIN', 1200.00),
+(@tick_1_id, 'HOME_WIN', 850.00),
+(@tick_1_id, 'AWAY_WIN', 2000.00);
 
-INSERT INTO simulation_settings
-(simulation_id, initial_home_odd, initial_away_odd, min_stake, max_stake)
-VALUES
-(1, 1.85, 3.20, 10.00, 2000.00);
+UPDATE simulations
+SET
+    status = 'FINISHED',
+    finished_at = CURRENT_TIMESTAMP(3)
+WHERE id = @simulation_id;
 
-INSERT INTO odds
-(simulation_id, market_type, current_odd, previous_odd, change_value, change_percent, trend)
-VALUES
-(1, 'HOME_WIN', 1.85, 1.85, 0.00, 0.00, 'STABLE'),
-(1, 'AWAY_WIN', 3.20, 3.20, 0.00, 0.00, 'STABLE');
+SELECT * FROM teams;
 
-INSERT INTO odds_history
-(simulation_id, tick_number, market_type, odd_value, height_percent, opacity_value)
-VALUES
-(1, 1, 'HOME_WIN', 1.85, 40, 0.70),
-(1, 2, 'HOME_WIN', 1.88, 50, 0.80),
-(1, 3, 'HOME_WIN', 1.82, 35, 0.65),
-(1, 1, 'AWAY_WIN', 3.20, 60, 0.80),
-(1, 2, 'AWAY_WIN', 3.10, 55, 0.75),
-(1, 3, 'AWAY_WIN', 3.45, 70, 0.90);
+SELECT * FROM matchups;
 
-INSERT INTO simulation_bets
-(simulation_id, generated_player_name, transaction_id, market_type, stake, odd_at_bet, possible_return)
-VALUES
-(1, 'Player_#8492', 'TX-0092-FF-18', 'HOME_WIN', 1200.00, 1.85, 2220.00),
-(1, 'Player_#3122', 'TX-8102-AP-99', 'HOME_WIN', 850.00, 1.85, 1572.50),
-(1, 'Player_#1044', 'TX-5512-KL-32', 'AWAY_WIN', 2000.00, 3.20, 6400.00);
+SELECT * FROM simulations;
 
-INSERT INTO bet_distribution_snapshots
-(simulation_id, tick_number, home_total_amount, away_total_amount, draw_total_amount,
- home_bets_count, away_bets_count, draw_bets_count,
- home_percent, away_percent, draw_percent)
-VALUES
-(1, 1, 2050.00, 2000.00, 0.00, 2, 1, 0, 50.62, 49.38, 0.00);
+SELECT * FROM simulation_ticks
+ORDER BY simulation_id, tick_number;
 
-INSERT INTO grading_results
-(simulation_id, tick_number, confidence_percent, grade, risk_level, stability_label, model_note)
-VALUES
-(1, 1, 82.00, 'A', 'LOW', 'WYSOKA STABILNOŚĆ', 'Model wykazuje stabilny trend kursów.');
+SELECT * FROM bets
+ORDER BY id;
 
-SELECT COUNT(*) FROM teams;
+SELECT
+    s.id AS simulation_id,
+    home_team.name AS home_team,
+    away_team.name AS away_team,
+    s.base_home_probability,
+    s.base_away_probability,
+    s.status,
+    s.started_at,
+    s.finished_at
+FROM simulations s
+JOIN matchups m
+    ON m.id = s.matchup_id
+JOIN teams home_team
+    ON home_team.id = m.home_team_id
+JOIN teams away_team
+    ON away_team.id = m.away_team_id
+ORDER BY s.id DESC;
 
-SELECT COUNT(*) FROM historical_matches;
+SELECT
+    st.id AS tick_id,
+    st.simulation_id,
+    st.tick_number,
+    st.home_odd,
+    st.away_odd,
+    st.created_at
+FROM simulation_ticks st
+ORDER BY st.simulation_id, st.tick_number;
 
-SELECT 
-    hm.id,
-    hm.match_date,
-    ht.name AS home_team,
-    at.name AS away_team,
-    hm.home_goals,
-    hm.away_goals,
-    hm.result,
-    hm.b365_home_odd,
-    hm.b365_draw_odd,
-    hm.b365_away_odd
-FROM historical_matches hm
-JOIN teams ht ON hm.home_team_id = ht.id
-JOIN teams at ON hm.away_team_id = at.id
-LIMIT 20;
-
-SELECT * FROM simulations ORDER BY id DESC;
-SELECT * FROM odds ORDER BY id DESC;
-SELECT * FROM odds_history ORDER BY id DESC;
-SELECT * FROM grading_results ORDER BY id DESC;
+SELECT
+    b.id AS bet_id,
+    st.simulation_id,
+    st.tick_number,
+    b.market_type,
+    b.stake,
+    st.created_at AS tick_time
+FROM bets b
+JOIN simulation_ticks st
+    ON st.id = b.tick_id
+ORDER BY st.simulation_id, st.tick_number, b.id;
