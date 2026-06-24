@@ -1,5 +1,5 @@
-from ai_model import train_ai_model as train_naive_bayes
-from decision_tree_model import train_ai_model as train_decision_tree
+from model_naive_bayes import train_ai_model as train_naive_bayes
+from model_decision_tree import train_ai_model as train_decision_tree
 
 
 class ModelComparisonManager:
@@ -36,7 +36,7 @@ class ModelComparisonManager:
             "metrics": decision_metrics
         })
 
-        # Wybór najlepszego modelu. Główne kryterium: accuracy, jeżeli accuracy jest bardzo podobna, wybieramy Decision Tree,ponieważ jest bardziej interpretowalny.  
+        # Wybor najlepszego modelu.
         accuracy_tolerance = 0.001
 
         best_accuracy = max(item["accuracy"] for item in self.models)
@@ -75,7 +75,6 @@ class ModelComparisonManager:
         print(f"Najlepszy model: {self.best_model_name}")
 
     def get_match_probabilities(self, home_team, away_team):
-        # Backend korzysta tylko z najlepszego wybranego modelu
         if self.best_model is None:
             return {
                 "H": 0.33,

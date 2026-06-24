@@ -4,8 +4,8 @@ from pydantic import BaseModel
 from db import get_connection
 
 #from random_forest_model import train_ai_model
-#from ai_model import train_ai_model
-from decision_tree_model import train_ai_model
+from model_naive_bayes import train_ai_model
+#from model_decision_tree import train_ai_model
 #from model_comparison import train_ai_model
 
 import random

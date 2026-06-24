@@ -133,7 +133,7 @@ const startSimulation = () => {
   .then(response => response.json())
   .then(data => {
       console.log("Serwer backend:", data.message);
-
+cd ..
       if (data.initial_odds) {
         console.log("kursy AI:", data.initial_odds);
         hostsStartStake.textContent = data.initial_odds.home.toFixed(2);

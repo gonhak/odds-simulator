@@ -1,6 +1,4 @@
 import os
-from operator import truediv
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,6 +10,27 @@ np.random.seed(RANDOM_SEED)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 csv_path = os.path.join(current_dir, "..", "premier_league.csv")
 
+def show_presentation_plots(y, y_test, predictions):
+    print("-> Generowanie wykresów do prezentacji...")
+    sns.set_theme(style="whitegrid")
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    sns.countplot(x=y, order=['H', 'D', 'A'], hue=y, palette='viridis', legend=False, ax=axes[0])
+    axes[0].set_title('Rozkład wyników meczów (Premier League)', fontsize=14)
+    axes[0].set_ylabel('Liczba meczów')
+    axes[0].set_xlabel('Wynik')
+
+    classes = ['H', 'D', 'A']
+    labels = ['H (Gosp)', 'D (Remis)', 'A (Gość)']
+
+    cm = pd.crosstab(y_test, predictions, rownames=['Rzeczywisty'], colnames=['Przewidywany'])
+    cm = cm.reindex(index=classes, columns=classes, fill_value=0)
+
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=axes[1], xticklabels=labels, yticklabels=labels)
+    axes[1].set_title('Macierz konfuzji (Naiwny Bayes)', fontsize=14)
+
+    plt.tight_layout()
+    plt.show()
 
 def train_test_split(X, y, test_size=0.2):
     split_idx = int(len(X) * (1 - test_size))
@@ -23,6 +42,25 @@ def train_test_split(X, y, test_size=0.2):
     y_test = y.iloc[split_idx:]
 
     return X_train, X_test, y_train, y_test
+
+
+def bin_features(df, fit=True, bins=None):
+    # koszykowanie na podstawie rozkładu historycznego
+    if fit:
+        bins = {}
+        df['HomeAttack'], bins['HomeAttack'] = pd.qcut(df['HomeAttack_Raw'], q=3, labels=['Weak', 'Average', 'Strong'], duplicates='drop', retbins=True)
+        df['AwayAttack'], bins['AwayAttack'] = pd.qcut(df['AwayAttack_Raw'], q=3, labels=['Weak', 'Average', 'Strong'], duplicates='drop', retbins=True)
+        df['HomeDefense'], bins['HomeDefense'] = pd.qcut(df['HomeDefense_Raw'], q=3, labels=['Strong', 'Average', 'Weak'], duplicates='drop', retbins=True)
+        df['AwayDefense'], bins['AwayDefense'] = pd.qcut(df['AwayDefense_Raw'], q=3, labels=['Strong', 'Average', 'Weak'], duplicates='drop', retbins=True)
+        for key in bins:
+            bins[key][0] = -np.inf
+            bins[key][-1] = np.inf
+    else:
+        df['HomeAttack'] = pd.cut(df['HomeAttack_Raw'], bins=bins['HomeAttack'], labels=['Weak', 'Average', 'Strong'], include_lowest=True)
+        df['AwayAttack'] = pd.cut(df['AwayAttack_Raw'], bins=bins['AwayAttack'], labels=['Weak', 'Average', 'Strong'], include_lowest=True)
+        df['HomeDefense'] = pd.cut(df['HomeDefense_Raw'], bins=bins['HomeDefense'], labels=['Strong', 'Average', 'Weak'], include_lowest=True)
+        df['AwayDefense'] = pd.cut(df['AwayDefense_Raw'], bins=bins['AwayDefense'], labels=['Strong', 'Average', 'Weak'], include_lowest=True)
+    return df, bins
 
 
 class CustomNaiveBayes:
@@ -50,7 +88,6 @@ class CustomNaiveBayes:
 
                 for val in unique_vals:
                     count = val_counts.get(val, 0)
-                    # Wygładzanie Laplace'a
                     self.feature_probs[c][col][val] = (count + 1) / (total_c + len(unique_vals))
 
     def predict(self, X):
@@ -80,7 +117,6 @@ class CustomNaiveBayes:
         raw_probs = {}
         total_prob = 0
 
-        # Bezpieczne pobieranie profili z fallbackiem do 'Average'
         h_profile = self.team_profiles.get(home_team, {"HomeAttack": "Average", "HomeDefense": "Average"})
         a_profile = self.team_profiles.get(away_team, {"AwayAttack": "Average", "AwayDefense": "Average"})
 
@@ -112,47 +148,21 @@ class CustomNaiveBayes:
 
         return final_probs
 
-
-def show_presentation_plots(y, y_test, predictions):
-    print("-> Generowanie wykresów do prezentacji...")
-    sns.set_theme(style="whitegrid")
-    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-
-    sns.countplot(x=y, order=['H', 'D', 'A'], hue=y, palette='viridis', legend=False, ax=axes[0])
-    axes[0].set_title('Rozkład wyników meczów (Premier League)', fontsize=14)
-    axes[0].set_ylabel('Liczba meczów')
-    axes[0].set_xlabel('Wynik')
-
-    classes = ['H', 'D', 'A']
-    labels = ['H (Gosp)', 'D (Remis)', 'A (Gość)']
-
-    cm = pd.crosstab(y_test, predictions, rownames=['Rzeczywisty'], colnames=['Przewidywany'])
-    cm = cm.reindex(index=classes, columns=classes, fill_value=0)
-
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=axes[1], xticklabels=labels, yticklabels=labels)
-    axes[1].set_title('Macierz konfuzji (Naiwny Bayes)', fontsize=14)
-
-    plt.tight_layout()
-    plt.show()
-
-
 def train_ai_model(show_plots=False):
     print("1. Wczytywanie danych...")
     df = pd.read_csv(csv_path, usecols=['HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'FTR'])
 
-    # Słownik przechowujący sumaryczną historię drużyn do liczenia średniej kroczącej
-    # Zapobiega wyciekowi danych (Data Leakage)
     running_stats = {}
 
     def get_init_stats():
         return {"H_scored": 0, "H_conceded": 0, "H_matches": 0,
                 "A_scored": 0, "A_conceded": 0, "A_matches": 0}
 
-    # Przygotowujemy listy na nowe, dynamiczne cechy
+    # dynamiczne cechy
     home_attacks, home_defenses = [], []
     away_attacks, away_defenses = [], []
 
-    print("2. Dynamiczne wyliczanie statystyk historycznych (Brak Data Leakage)...")
+    print("2. wyliczanie statystyk...")
     for _, row in df.iterrows():
         h_team = row['HomeTeam']
         a_team = row['AwayTeam']
@@ -160,7 +170,6 @@ def train_ai_model(show_plots=False):
         if h_team not in running_stats: running_stats[h_team] = get_init_stats()
         if a_team not in running_stats: running_stats[a_team] = get_init_stats()
 
-        # Pobieramy średnie ZANIM dopiszemy wynik bieżącego meczu
         h_stat = running_stats[h_team]
         a_stat = running_stats[a_team]
 
@@ -175,7 +184,7 @@ def train_ai_model(show_plots=False):
         away_attacks.append(a_avg_scored)
         away_defenses.append(a_avg_conceded)
 
-        # Aktualizacja statystyk PO pobraniu cech na ten mecz
+        # Aktualizacja statystyk
         running_stats[h_team]["H_scored"] += int(row['FTHG'])
         running_stats[h_team]["H_conceded"] += int(row['FTAG'])
         running_stats[h_team]["H_matches"] += 1
@@ -184,31 +193,34 @@ def train_ai_model(show_plots=False):
         running_stats[a_team]["A_conceded"] += int(row['FTHG'])
         running_stats[a_team]["A_matches"] += 1
 
-    # Przypisujemy wyliczone, bezpieczne ciągłe wartości do DataFrame
+    # Przypisujemy wyliczone wartosci do DataFrame
     df['HomeAttack_Raw'] = home_attacks
     df['HomeDefense_Raw'] = home_defenses
     df['AwayAttack_Raw'] = away_attacks
     df['AwayDefense_Raw'] = away_defenses
 
-    # Dyskretyzacja (koszykowanie) na podstawie rozkładu historycznego
-    df['HomeAttack'] = pd.qcut(df['HomeAttack_Raw'], q=3, labels=['Weak', 'Average', 'Strong'], duplicates='drop')
-    df['AwayAttack'] = pd.qcut(df['AwayAttack_Raw'], q=3, labels=['Weak', 'Average', 'Strong'], duplicates='drop')
-    df['HomeDefense'] = pd.qcut(df['HomeDefense_Raw'], q=3, labels=['Strong', 'Average', 'Weak'], duplicates='drop')
-    df['AwayDefense'] = pd.qcut(df['AwayDefense_Raw'], q=3, labels=['Strong', 'Average', 'Weak'], duplicates='drop')
-
-    X = df[['HomeTeam', 'AwayTeam', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense']]
+    # Podzial na surowe dane
+    X_raw = df[['HomeTeam', 'AwayTeam', 'HomeAttack_Raw', 'HomeDefense_Raw', 'AwayAttack_Raw', 'AwayDefense_Raw']]
     y = df['FTR']
 
     print("3. Podzial na dane treningowe i testowe...")
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    X_train_raw, X_test_raw, y_train, y_test = train_test_split(X_raw, y, test_size=0.2)
+
+    # koszyczkowanie
+    X_train_raw, bins = bin_features(X_train_raw.copy(), fit=True)
+    X_test_raw, _ = bin_features(X_test_raw.copy(), fit=False, bins=bins)
+
+    df, _ = bin_features(df, fit=False, bins=bins)
+
+    X_train = X_train_raw[['HomeTeam', 'AwayTeam', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense']]
+    X_test = X_test_raw[['HomeTeam', 'AwayTeam', 'HomeAttack', 'HomeDefense', 'AwayAttack', 'AwayDefense']]
 
     model = CustomNaiveBayes()
     model.fit(X_train, y_train)
 
-    # Budowanie OSTATECZNYCH profili drużyn (bierzemy ostatni znany stan z końca zbioru)
-    print("4. Budowanie profili końcowych drużyn do przyszłych predykcji...")
+    print("4. Budowanie profili druzyn...")
     for team in running_stats.keys():
-        # Szukamy ostatniego meczu domowego i wyjazdowego tej drużyny
+
         last_home_match = df[df['HomeTeam'] == team]
         last_away_match = df[df['AwayTeam'] == team]
 
@@ -226,9 +238,6 @@ def train_ai_model(show_plots=False):
 
     print("5. Testowanie modelu...")
     predictions = model.predict(X_test)
-
-    print("Bayes true classes:", np.unique(y_test.values, return_counts=True))
-    print("Bayes predicted classes:", np.unique(predictions, return_counts=True))
 
     accuracy = np.sum(predictions == y_test.values) / len(y_test)
     model.accuracy = accuracy
