@@ -5,7 +5,7 @@ The system integrates with a custom naive bayes and decision tree models with an
 # SETUP AND CONFIGURATION
 
 # 1. Clone the repository
-git clone https://github.com/your-username/odds-simulator.git
+git clone https://github.com/gonhak/odds-simulator.git
 cd odds-simulator
 
 # 2. Database Setup
